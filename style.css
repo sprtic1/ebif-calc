@@ -5,6 +5,7 @@
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overflow-x: hidden; width: 100%; }
 
 :root {
   --olive:    #868D54;
@@ -109,7 +110,7 @@ body {
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   background: var(--olive);
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   position: relative;
   z-index: 10;
@@ -148,7 +149,7 @@ body {
 .section-dark .data-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
 .section-dark .data-table tbody tr:hover td { background: rgba(134,141,84,0.15); }
 
-.section-inner { max-width: 1200px; margin: 0 auto; }
+.section-inner { max-width: 1200px; margin: 0 auto; overflow: hidden; }
 .section-title {
   font-family: var(--serif);
   font-weight: 700;
@@ -281,7 +282,8 @@ body {
   border-radius: 12px;
   padding: 1.5rem;
   position: relative;
-  overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
 }
 .shipping-card::before {
   content: '';
