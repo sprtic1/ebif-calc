@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "Ellis Beach Chalet 29",
-    "run_date": "2026-04-05T13:01:26",
+    "run_date": "2026-04-05T13:11:11",
     "total_walls": 22,
     "walls_with_warnings": 1,
     "excluded_walls": 0
@@ -22,21 +22,21 @@
         "recommended": true
       },
       {
-        "label": "1x 20ft High Cube + 1x 40ft Standard",
+        "label": "1x 20ft High Cube + 1x 40ft Standard [HEIGHT EXCEEDED]",
         "containers": 2,
         "capacity": 64,
         "utilisation": 84.4,
         "recommended": false
       },
       {
-        "label": "1x 20ft Standard + 1x 40ft High Cube",
+        "label": "1x 20ft Standard + 1x 40ft High Cube [HEIGHT EXCEEDED]",
         "containers": 2,
         "capacity": 64,
         "utilisation": 84.4,
         "recommended": false
       },
       {
-        "label": "1x 20ft Standard + 1x 40ft Standard",
+        "label": "1x 20ft Standard + 1x 40ft Standard [HEIGHT EXCEEDED]",
         "containers": 2,
         "capacity": 64,
         "utilisation": 84.4,
@@ -50,14 +50,14 @@
         "recommended": false
       },
       {
-        "label": "1x 40ft Standard + 1x 40ft High Cube",
+        "label": "1x 40ft Standard + 1x 40ft High Cube [HEIGHT EXCEEDED]",
         "containers": 2,
         "capacity": 88,
         "utilisation": 61.4,
         "recommended": false
       },
       {
-        "label": "2x 40ft Standard",
+        "label": "2x 40ft Standard [HEIGHT EXCEEDED]",
         "containers": 2,
         "capacity": 88,
         "utilisation": 61.4,
@@ -791,7 +791,11 @@
           }
         }
       ],
-      "total_pallets": 20
+      "total_pallets": 20,
+      "layers_used": 2,
+      "loaded_pallet_height_in": 48,
+      "stack_height_in": 96,
+      "height_exceeds": false
     },
     {
       "container_number": 2,
@@ -1178,7 +1182,11 @@
           }
         }
       ],
-      "total_pallets": 34
+      "total_pallets": 34,
+      "layers_used": 2,
+      "loaded_pallet_height_in": 48,
+      "stack_height_in": 96,
+      "height_exceeds": false
     }
   ],
   "warnings": [

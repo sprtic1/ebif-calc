@@ -196,37 +196,56 @@ function renderShipping(data) {
     const card = document.createElement('div');
     card.className = 'shipping-card';
 
-    // Build mini pallet grid (11 cols x 4 rows = 2 layers x 2 rows)
-    let palletHtml = '<div class="pallet-grid">';
-    const maxCells = 44; // 11 x 2 x 2
-    for (let i = 0; i < maxCells; i++) {
-      const p = ctr.pallets[i];
-      if (p) {
-        const cls = p.block_id.startsWith('COM') ? 'pallet-com' : 'pallet-res';
-        palletHtml += `<div class="pallet-cell ${cls}" title="P${p.pallet_number}: ${p.block_id} x${p.block_count}">${p.block_id.split('-')[1]}</div>`;
-      } else {
-        palletHtml += '<div class="pallet-cell pallet-empty"></div>';
-      }
-    }
-    palletHtml += '</div>';
+    const fmtDim = (inches) => {
+      const ft = Math.floor(inches / 12);
+      const rem = Math.round(inches % 12);
+      return `${ft}'${rem}"`;
+    };
 
     // Container spec line
     let specLine = '';
     if (ctr.name && ctr.interior_length_in) {
       const l = ctr.interior_length_in, w = ctr.interior_width_in, h = ctr.interior_height_in;
-      const fmtDim = (inches) => {
-        const ft = Math.floor(inches / 12);
-        const rem = Math.round(inches % 12);
-        return `${ft}'${rem}"`;
-      };
       specLine = `<div class="container-spec">${ctr.name} &mdash; ${fmtDim(l)} &times; ${fmtDim(w)} &times; ${fmtDim(h)} interior &mdash; ${ctr.max_payload_lbs.toLocaleString()} lbs max payload &mdash; ${ctr.max_pallets} pallets max</div>`;
     }
+
+    // Split pallets by layer
+    const layer1 = (ctr.pallets || []).filter(p => p.position.layer === 1);
+    const layer2 = (ctr.pallets || []).filter(p => p.position.layer === 2);
+    const maxPerLayer = (ctr.max_pallets || 44) / 2;
+
+    function buildLayerGrid(pallets, label) {
+      let html = `<div class="layer-label">${label}</div><div class="pallet-grid">`;
+      for (let i = 0; i < maxPerLayer; i++) {
+        const p = pallets[i];
+        if (p) {
+          const cls = p.block_id.startsWith('COM') ? 'pallet-com' : 'pallet-res';
+          html += `<div class="pallet-cell ${cls}" title="P${p.pallet_number}: ${p.block_id} x${p.block_count}">${p.block_id.split('-')[1]}</div>`;
+        } else {
+          html += '<div class="pallet-cell pallet-empty"></div>';
+        }
+      }
+      html += '</div>';
+      return html;
+    }
+
+    // Stack height check
+    const palletH = ctr.loaded_pallet_height_in || 48;
+    const layers = ctr.layers_used || 2;
+    const stackH = ctr.stack_height_in || (palletH * layers);
+    const interiorH = ctr.interior_height_in || 90;
+    const exceeds = stackH > interiorH;
+    const heightClass = exceeds ? 'height-warning' : 'height-ok';
+    const heightLine = `<div class="stack-height ${heightClass}">Layer height: ${palletH}in (estimated) &times; ${layers} layers = ${stackH}in total &mdash; Container interior height: ${interiorH}in${exceeds ? ' &#x26A0; EXCEEDS' : ''}</div>`;
 
     card.innerHTML = `
       <h3>Container ${ctr.container_number} of ${data.summary.containers_required}</h3>
       ${specLine}
       <div class="stat"><strong>${ctr.total_pallets} pallets loaded</strong></div>
-      ${palletHtml}
+      ${buildLayerGrid(layer1, 'Layer 1 (floor level)')}
+      <div class="layer-gap"></div>
+      ${layer2.length > 0 ? buildLayerGrid(layer2, 'Layer 2 (stacked)') : ''}
+      ${heightLine}
     `;
     grid.appendChild(card);
   });
