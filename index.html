@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RENCO Block Schedule — Ellis Beach Chalet 29</title>
+  <title>RENCO Block Schedule — Projects</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,161 +11,72 @@
 </head>
 <body>
 
-  <!-- Hero -->
   <header class="hero">
     <div class="hero-inner">
-      <div class="hero-brand">
-        <span class="brand-renco">RENCO</span>
-      </div>
+      <div class="hero-brand"><span class="brand-renco">RENCO</span></div>
       <h1 class="hero-title">Block Schedule</h1>
-      <p class="hero-project" id="project-name">Loading...</p>
-      <p class="hero-date" id="run-date"></p>
+      <p class="hero-project">Project Dashboard</p>
     </div>
   </header>
 
-  <!-- Project Preview -->
-  <section class="preview">
-    <div class="preview-inner">
-      <img src="assets/model.png" alt="Ellis Beach Chalet 29 — 3D Model Preview" class="preview-img">
-      <p class="preview-caption" id="preview-caption">Ellis Beach Chalet 29</p>
-    </div>
-  </section>
-
-  <!-- KPI Cards -->
-  <section class="kpi-strip">
-    <div class="kpi-card">
-      <div class="kpi-value" id="kpi-walls">--</div>
-      <div class="kpi-label">Walls</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-value" id="kpi-blocks">--</div>
-      <div class="kpi-label">Total Blocks</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-value" id="kpi-weight">--</div>
-      <div class="kpi-label">Est. Weight (lbs)</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-value" id="kpi-containers">--</div>
-      <div class="kpi-label">Containers</div>
-    </div>
-  </section>
-
-  <!-- Block Breakdown -->
-  <section class="section">
-    <div class="section-inner two-col">
-      <div class="chart-wrap">
-        <h2 class="section-title">Block Distribution</h2>
-        <div class="chart-container">
-          <canvas id="block-chart"></canvas>
-        </div>
-      </div>
-      <div class="block-table-wrap">
-        <h2 class="section-title">Block Summary</h2>
-        <table class="data-table" id="block-table">
-          <thead>
-            <tr>
-              <th>Block</th>
-              <th class="num">Count</th>
-              <th class="num">lbs/ea</th>
-              <th class="num">Total lbs</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-          <tfoot>
-            <tr>
-              <td><strong>TOTAL</strong></td>
-              <td class="num" id="block-total-count">--</td>
-              <td class="num"></td>
-              <td class="num" id="block-total-weight">--</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Wall Schedule -->
-  <section class="section section-dark">
-    <div class="section-inner">
-      <h2 class="section-title">Wall Schedule</h2>
-      <div class="table-scroll">
-        <table class="data-table wall-table" id="wall-table">
-          <thead>
-            <tr>
-              <th>Wall ID</th>
-              <th>Story</th>
-              <th class="num">Length</th>
-              <th class="num">Height</th>
-              <th>Series</th>
-              <th class="num">Courses</th>
-              <th class="num">Openings</th>
-              <th class="num">COM-32</th>
-              <th class="num">COM-16</th>
-              <th class="num">COM-8</th>
-              <th class="num">COM-4</th>
-              <th class="num">Total</th>
-              <th class="num">Weight</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Shipping -->
   <section class="section">
     <div class="section-inner">
-      <h2 class="section-title">Shipping Summary</h2>
-      <p class="shipping-recommendation" id="shipping-rec"></p>
-      <p class="section-subtitle">Plan view — each cell represents one pallet</p>
-      <div class="shipping-grid" id="shipping-grid"></div>
+      <h2 class="section-title">Projects</h2>
+      <div class="project-grid" id="project-grid">
+        <p class="loading-msg">Loading projects...</p>
+      </div>
     </div>
   </section>
 
-  <!-- Warnings -->
-  <section class="section section-dark" id="warnings-section" style="display:none">
-    <div class="section-inner">
-      <h2 class="section-title">Warnings</h2>
-      <ul class="warning-list" id="warning-list"></ul>
-    </div>
-  </section>
-
-  <!-- Data Pending -->
-  <section class="section section-pending">
-    <div class="section-inner">
-      <h2 class="section-title">Data Pending Confirmation</h2>
-      <ol class="pending-list">
-        <li>Block weights — all types except COM-16 (8.5 lbs confirmed)</li>
-        <li>Blocks per pallet — affects container count accuracy</li>
-        <li>Pallet dimensions — loaded height per block type for stacking verification</li>
-        <li>Pallet weight — empty pallet tare weight</li>
-        <li>Maximum pallet load — lbs per pallet for Renco blocks</li>
-        <li>Build by Color scheme — color code per block type</li>
-        <li>Corner and wall-end block treatment</li>
-        <li>Header and lintel block over openings</li>
-        <li>Adhesive coverage rate — linear feet per unit of Plexus MA530</li>
-        <li>IAPMO Evaluation Report ER-433</li>
-        <li>Floor system specs — joists, decking, span ratings</li>
-        <li>Minimum and maximum wall dimensions</li>
-        <li>Loaded pallet height per block type — critical for container type selection and stacking verification. Current assumption: 48in per layer (estimated). Actual height determines whether standard or high cube containers are required.</li>
-      </ol>
-      <p class="pending-note">This data has been requested from Renco USA. Current calculations use confirmed dimensions from the Renco 2024 Sales Brochure with estimated weights where indicated.</p>
-    </div>
-  </section>
-
-  <!-- Footer -->
   <footer class="footer">
     <div class="footer-inner">
       <p>Generated by <strong>RENCO Block Calculator v0.3</strong></p>
-      <p class="footer-note">Block weights estimated pending Renco confirmation. COM-16 (8.5 lbs) confirmed.</p>
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="app.js"></script>
+  <script>
+    async function init() {
+      try {
+        const resp = await fetch('projects.json');
+        const projects = await resp.json();
+        const grid = document.getElementById('project-grid');
+        grid.innerHTML = '';
+
+        if (!projects.length) {
+          grid.innerHTML = '<p>No projects yet. Run the pipeline to add one.</p>';
+          return;
+        }
+
+        projects.sort((a, b) => new Date(b.run_date) - new Date(a.run_date));
+
+        projects.forEach(p => {
+          const card = document.createElement('a');
+          card.href = p.slug + '/';
+          card.className = 'project-card';
+
+          const d = new Date(p.run_date);
+          const dateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+          const imgSrc = p.slug + '/assets/model.png';
+
+          card.innerHTML = `
+            <div class="project-card-img" style="background-image: url('${imgSrc}')"></div>
+            <div class="project-card-body">
+              <h3 class="project-card-title">${p.name}</h3>
+              <div class="project-card-stats">
+                <span>${p.total_blocks.toLocaleString()} blocks</span>
+                <span>${p.containers} containers</span>
+              </div>
+              <div class="project-card-date">${dateStr}</div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (e) {
+        document.getElementById('project-grid').innerHTML = '<p>No projects yet. Run the pipeline to add one.</p>';
+      }
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

@@ -421,6 +421,69 @@ body {
 .footer strong { color: var(--sage); }
 .footer-note { margin-top: 0.5rem; font-size: 0.7rem; opacity: 0.6; }
 
+/* === Breadcrumb === */
+.breadcrumb {
+  background: var(--dark);
+  padding: 0.6rem 2rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+.breadcrumb a { color: var(--sage); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: rgba(255,255,255,0.5); }
+
+/* === Project Cards === */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+.project-card {
+  background: var(--white);
+  border: 2px solid var(--sage);
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--dark);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.project-card-img {
+  height: 180px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--sage-lt);
+}
+.project-card-body { padding: 1.25rem; }
+.project-card-title {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--olive-d);
+  margin-bottom: 0.5rem;
+}
+.project-card-stats {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: #666;
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.project-card-date {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: #999;
+}
+.loading-msg {
+  font-family: var(--mono);
+  color: #999;
+  font-size: 0.85rem;
+}
+
 /* === Animations === */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
