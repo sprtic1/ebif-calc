@@ -213,33 +213,19 @@ function renderShipping(data) {
       return `${ft}'${rem}"`;
     };
 
-    // Container spec line
-    let specLine = '';
-    if (ctr.name && ctr.interior_length_in) {
-      const l = ctr.interior_length_in, w = ctr.interior_width_in, h = ctr.interior_height_in;
-      specLine = `<div class="container-spec">${ctr.name} &mdash; ${fmtDim(l)} &times; ${fmtDim(w)} &times; ${fmtDim(h)} interior &mdash; ${ctr.max_payload_lbs.toLocaleString()} lbs max payload &mdash; ${ctr.max_pallets} pallets max</div>`;
-    }
-
-    // Split pallets by layer — use position data for grid placement
+    // Pallets by layer
     const layer1 = (ctr.pallets || []).filter(p => p.position.layer === 1);
     const layer2 = (ctr.pallets || []).filter(p => p.position.layer === 2);
-    const ppl = (ctr.max_pallets || 44) / 2;  // pallets per layer
-    const depthCols = Math.ceil(ppl);  // depth positions along container length
-    const widthRows = 2;  // width positions across container
+    const ppl = (ctr.max_pallets || 44) / 2;
+    const depthCols = Math.ceil(ppl);
+    const widthRows = 2;
 
-    function buildLayerGrid(pallets, label) {
-      // Horizontal: 2 rows (width) × N cols (depth), loaded front-to-back
-      // Packing: p.position.row = depth, p.position.col = width side
-      // Display: row = width side (col), col = depth (row) — transposed
+    function buildLayerGrid(pallets) {
       const grid = {};
-      pallets.forEach(p => {
-        const key = `${p.position.col}-${p.position.row}`;
-        grid[key] = p;
-      });
-
-      let html = `<div class="layer-label">${label}</div><div class="pallet-grid" style="grid-template-columns: repeat(${depthCols}, 1fr)">`;
-      for (let w = 1; w <= widthRows; w++) {       // display row = width side
-        for (let d = 1; d <= depthCols; d++) {      // display col = depth position
+      pallets.forEach(p => { grid[`${p.position.col}-${p.position.row}`] = p; });
+      let html = `<div class="pallet-grid" style="grid-template-columns: repeat(${depthCols}, 1fr)">`;
+      for (let w = 1; w <= widthRows; w++) {
+        for (let d = 1; d <= depthCols; d++) {
           const p = grid[`${w}-${d}`];
           if (p) {
             const cls = p.block_id.startsWith('COM') ? 'pallet-com' : 'pallet-res';
@@ -253,32 +239,20 @@ function renderShipping(data) {
       return html;
     }
 
-    // Stack height check
-    const palletH = ctr.loaded_pallet_height_in || 48;
-    const layers = ctr.layers_used || 2;
-    const stackH = ctr.stack_height_in || (palletH * layers);
-    const interiorH = ctr.interior_height_in || 90;
-    const exceeds = stackH > interiorH;
-    const heightClass = exceeds ? 'height-warning' : 'height-ok';
-    const heightLine = `<div class="stack-height ${heightClass}">Layer height: ${palletH}in (estimated) &times; ${layers} layers = ${stackH}in total &mdash; Container interior height: ${interiorH}in${exceeds ? ' &#x26A0; EXCEEDS' : ''}</div>`;
-
-    // Payload summary
     const loadedWt = ctr.total_weight_lbs || 0;
     const maxWt = ctr.max_payload_lbs || 0;
     const wtPct = maxWt > 0 ? Math.round(loadedWt / maxWt * 100) : 0;
-    const wtClass = wtPct > 95 ? 'weight-warning' : 'weight-ok';
-    const remaining = maxWt - loadedWt;
-    const payloadLine = `<div class="payload-summary ${wtClass}">Actual payload is ${loadedWt.toLocaleString()} pounds. Maximum payload capacity is ${maxWt.toLocaleString()} pounds. ${remaining > 0 ? `${remaining.toLocaleString()} pounds of capacity remaining (${wtPct}% loaded).` : 'Container is at maximum capacity.'}</div>`;
 
     card.innerHTML = `
       <h3>Container ${ctr.container_number} of ${data.summary.containers_required}</h3>
-      ${specLine}
-      <div class="stat"><strong>${ctr.total_pallets} pallets loaded</strong></div>
-      ${payloadLine}
-      ${buildLayerGrid(layer1, 'Layer 1 (floor level)')}
-      <div class="layer-gap"></div>
-      ${layer2.length > 0 ? buildLayerGrid(layer2, 'Layer 2 (stacked)') : ''}
-      ${heightLine}
+      <div class="container-spec">${ctr.name}</div>
+      <div class="container-stats">
+        <span>Max capacity: ${maxWt.toLocaleString()} lbs</span>
+        <span>Actual payload: ${loadedWt.toLocaleString()} lbs</span>
+        <span>${wtPct}% filled</span>
+      </div>
+      ${buildLayerGrid(layer1)}
+      ${layer2.length > 0 ? '<div class="layer-gap"></div>' + buildLayerGrid(layer2) : ''}
     `;
     grid.appendChild(card);
   });
