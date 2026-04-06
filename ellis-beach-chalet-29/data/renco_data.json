@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "Ellis Beach Chalet 29",
-    "run_date": "2026-04-06T11:30:38",
+    "run_date": "2026-04-06T11:34:04",
     "total_walls": 43,
     "walls_with_warnings": 1,
     "excluded_walls": 0
@@ -1317,6 +1317,7 @@
         }
       ],
       "total_pallets": 20,
+      "total_weight_lbs": 13057.0,
       "layers_used": 2,
       "loaded_pallet_height_in": 48,
       "stack_height_in": 96,
@@ -1774,6 +1775,7 @@
         }
       ],
       "total_pallets": 40,
+      "total_weight_lbs": 27318.9,
       "layers_used": 2,
       "loaded_pallet_height_in": 48,
       "stack_height_in": 96,

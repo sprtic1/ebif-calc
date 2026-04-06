@@ -422,6 +422,16 @@ body {
 }
 .height-ok { color: var(--olive-d); background: var(--sage-lt); }
 .height-warning { color: #c0392b; background: #fce4e4; font-weight: 700; }
+.payload-summary {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  margin: 0.4rem 0;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+.weight-ok { color: var(--olive-d); background: var(--sage-lt); }
+.weight-warning { color: #c0392b; background: #fce4e4; font-weight: 700; }
 
 /* Pallet mini-grid — horizontal layout, loaded front-to-back (widthwise) */
 .pallet-grid {

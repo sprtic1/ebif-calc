@@ -262,10 +262,18 @@ function renderShipping(data) {
     const heightClass = exceeds ? 'height-warning' : 'height-ok';
     const heightLine = `<div class="stack-height ${heightClass}">Layer height: ${palletH}in (estimated) &times; ${layers} layers = ${stackH}in total &mdash; Container interior height: ${interiorH}in${exceeds ? ' &#x26A0; EXCEEDS' : ''}</div>`;
 
+    // Payload summary
+    const loadedWt = ctr.total_weight_lbs || 0;
+    const maxWt = ctr.max_payload_lbs || 0;
+    const wtPct = maxWt > 0 ? Math.round(loadedWt / maxWt * 100) : 0;
+    const wtClass = wtPct > 95 ? 'weight-warning' : 'weight-ok';
+    const payloadLine = `<div class="payload-summary ${wtClass}">Payload: ${loadedWt.toLocaleString()} lbs of ${maxWt.toLocaleString()} lbs max (${wtPct}%)</div>`;
+
     card.innerHTML = `
       <h3>Container ${ctr.container_number} of ${data.summary.containers_required}</h3>
       ${specLine}
       <div class="stat"><strong>${ctr.total_pallets} pallets loaded</strong></div>
+      ${payloadLine}
       ${buildLayerGrid(layer1, 'Layer 1 (floor level)')}
       <div class="layer-gap"></div>
       ${layer2.length > 0 ? buildLayerGrid(layer2, 'Layer 2 (stacked)') : ''}
