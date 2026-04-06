@@ -267,7 +267,8 @@ function renderShipping(data) {
     const maxWt = ctr.max_payload_lbs || 0;
     const wtPct = maxWt > 0 ? Math.round(loadedWt / maxWt * 100) : 0;
     const wtClass = wtPct > 95 ? 'weight-warning' : 'weight-ok';
-    const payloadLine = `<div class="payload-summary ${wtClass}">Payload: ${loadedWt.toLocaleString()} lbs of ${maxWt.toLocaleString()} lbs max (${wtPct}%)</div>`;
+    const remaining = maxWt - loadedWt;
+    const payloadLine = `<div class="payload-summary ${wtClass}">Actual payload is ${loadedWt.toLocaleString()} pounds. Maximum payload capacity is ${maxWt.toLocaleString()} pounds. ${remaining > 0 ? `${remaining.toLocaleString()} pounds of capacity remaining (${wtPct}% loaded).` : 'Container is at maximum capacity.'}</div>`;
 
     card.innerHTML = `
       <h3>Container ${ctr.container_number} of ${data.summary.containers_required}</h3>
