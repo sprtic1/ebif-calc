@@ -237,7 +237,7 @@ function renderShipping(data) {
         grid[key] = p;
       });
 
-      let html = `<div class="layer-label">${label}</div><div class="pallet-grid" style="grid-template-columns: repeat(${depthCols}, 46px)">`;
+      let html = `<div class="layer-label">${label}</div><div class="pallet-grid" style="grid-template-columns: repeat(${depthCols}, 1fr)">`;
       for (let w = 1; w <= widthRows; w++) {       // display row = width side
         for (let d = 1; d <= depthCols; d++) {      // display col = depth position
           const p = grid[`${w}-${d}`];
