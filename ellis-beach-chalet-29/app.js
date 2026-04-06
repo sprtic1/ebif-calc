@@ -273,6 +273,7 @@ function renderConsumables(data) {
         <div class="consumable-detail">1 per 20 glue guns (${c.adhesive_cartridges} cartridges)</div>
       </div>
     </div>
+    <p class="consumables-note">Shipped loose with container cargo — not palletized.</p>
   `;
 }
 

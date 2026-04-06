@@ -592,6 +592,13 @@ body {
   color: #999;
   margin-top: 0.25rem;
 }
+.consumables-note {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #888;
+  margin-top: 1rem;
+}
 
 /* === Breadcrumb === */
 .breadcrumb {
