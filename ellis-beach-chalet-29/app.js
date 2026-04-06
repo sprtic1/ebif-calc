@@ -220,12 +220,18 @@ function renderShipping(data) {
     function buildLayerGrid(pallets, label) {
       // Build lookup: row-col → pallet
       const grid = {};
-      pallets.forEach(p => { grid[`${p.position.row}-${p.position.col}`] = p; });
+      let maxCol = 0;
+      pallets.forEach(p => {
+        grid[`${p.position.row}-${p.position.col}`] = p;
+        if (p.position.col > maxCol) maxCol = p.position.col;
+      });
+      // Use the container's full column count, but no empty cells beyond last filled column
+      const cols = Math.max(maxCol, 1);
 
       let html = `<div class="layer-label">${label}</div>`;
-      html += `<div class="pallet-grid" style="grid-template-columns: repeat(${numCols}, 1fr)">`;
+      html += `<div class="pallet-grid" style="grid-template-columns: repeat(${cols}, 1fr)">`;
       for (let r = 1; r <= numRows; r++) {
-        for (let c = 1; c <= numCols; c++) {
+        for (let c = 1; c <= cols; c++) {
           const p = grid[`${r}-${c}`];
           if (p) {
             const cls = p.block_id.startsWith('COM') ? 'pallet-com' : 'pallet-res';
