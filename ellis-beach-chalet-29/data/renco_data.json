@@ -1,8 +1,8 @@
 {
   "project": {
     "name": "Ellis Beach Chalet 29",
-    "run_date": "2026-04-06T16:10:15",
-    "pipeline_duration_sec": 54.1,
+    "run_date": "2026-04-06T16:14:13",
+    "pipeline_duration_sec": 53.3,
     "total_walls": 44,
     "walls_with_warnings": 1,
     "excluded_walls": 0
@@ -1580,8 +1580,8 @@
           "weight_lbs": 805.0,
           "position": {
             "layer": 1,
-            "row": 1,
-            "col": 2
+            "row": 2,
+            "col": 1
           }
         },
         {
@@ -1592,7 +1592,7 @@
           "position": {
             "layer": 1,
             "row": 1,
-            "col": 3
+            "col": 2
           }
         },
         {
@@ -1602,8 +1602,8 @@
           "weight_lbs": 805.0,
           "position": {
             "layer": 1,
-            "row": 1,
-            "col": 4
+            "row": 2,
+            "col": 2
           }
         },
         {
@@ -1614,7 +1614,7 @@
           "position": {
             "layer": 1,
             "row": 1,
-            "col": 5
+            "col": 3
           }
         },
         {
@@ -1625,7 +1625,7 @@
           "position": {
             "layer": 1,
             "row": 2,
-            "col": 1
+            "col": 3
           }
         },
         {
@@ -1635,8 +1635,8 @@
           "weight_lbs": 805.0,
           "position": {
             "layer": 1,
-            "row": 2,
-            "col": 2
+            "row": 1,
+            "col": 4
           }
         },
         {
@@ -1657,8 +1657,8 @@
           "weight_lbs": 805.0,
           "position": {
             "layer": 2,
-            "row": 1,
-            "col": 2
+            "row": 2,
+            "col": 1
           }
         },
         {
@@ -1669,7 +1669,7 @@
           "position": {
             "layer": 2,
             "row": 1,
-            "col": 3
+            "col": 2
           }
         },
         {
@@ -1679,8 +1679,8 @@
           "weight_lbs": 805.0,
           "position": {
             "layer": 2,
-            "row": 1,
-            "col": 4
+            "row": 2,
+            "col": 2
           }
         },
         {
@@ -1691,7 +1691,7 @@
           "position": {
             "layer": 2,
             "row": 1,
-            "col": 5
+            "col": 3
           }
         },
         {
@@ -1702,7 +1702,7 @@
           "position": {
             "layer": 2,
             "row": 2,
-            "col": 1
+            "col": 3
           }
         },
         {
@@ -1712,8 +1712,8 @@
           "weight_lbs": 689.8,
           "position": {
             "layer": 2,
-            "row": 2,
-            "col": 2
+            "row": 1,
+            "col": 4
           }
         }
       ],
