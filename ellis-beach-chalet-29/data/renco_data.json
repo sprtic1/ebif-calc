@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "Ellis Beach Chalet 29",
-    "run_date": "2026-04-06T12:47:40",
+    "run_date": "2026-04-06T12:48:20",
     "total_walls": 43,
     "walls_with_warnings": 1,
     "excluded_walls": 0
@@ -11,11 +11,11 @@
     "total_weight_lbs": 38155.9,
     "weight_is_estimated": true,
     "containers_required": 2,
-    "container_recommendation": "2x 40ft Standard",
+    "container_recommendation": "2x 40ft High Cube",
     "container_utilization": 68.2,
     "container_options": [
       {
-        "label": "2x 40ft Standard",
+        "label": "2x 40ft High Cube",
         "containers": 2,
         "capacity": 88,
         "utilization": 68.2,
@@ -1031,12 +1031,12 @@
   "containers": [
     {
       "container_number": 1,
-      "type": "40ST",
-      "name": "40ft Standard",
+      "type": "40HC",
+      "name": "40ft High Cube",
       "interior_length_in": 473,
       "interior_width_in": 93,
-      "interior_height_in": 90,
-      "max_payload_lbs": 58935,
+      "interior_height_in": 102,
+      "max_payload_lbs": 58135,
       "max_pallets": 44,
       "pallets": [
         {
@@ -1291,12 +1291,12 @@
     },
     {
       "container_number": 2,
-      "type": "40ST",
-      "name": "40ft Standard",
+      "type": "40HC",
+      "name": "40ft High Cube",
       "interior_length_in": 473,
       "interior_width_in": 93,
-      "interior_height_in": 90,
-      "max_payload_lbs": 58935,
+      "interior_height_in": 102,
+      "max_payload_lbs": 58135,
       "max_pallets": 44,
       "pallets": [
         {
@@ -1723,7 +1723,7 @@
       "layers_used": 2,
       "loaded_pallet_height_in": 48,
       "stack_height_in": 96,
-      "height_exceeds": true
+      "height_exceeds": false
     }
   ],
   "warnings": [
