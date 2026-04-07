@@ -196,6 +196,10 @@ def step1_extract(offline: bool = False):
         print(f"    Fields to complete: {total_blank}")
     print()
 
+    # Merge with existing Excel data (preserve manual entries on re-runs)
+    from ebif.merge import merge_schedules
+    schedules = merge_schedules(schedules, schedule_defs, output_dir)
+
     # Write individual Excel files
     from ebif.output.excel_writer import write_template
     paths = write_template(

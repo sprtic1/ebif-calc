@@ -125,10 +125,32 @@ def write_schedule_file(
         name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
 
     # Data table starts at row 5
-    columns = ["Element ID"] + schedule_def.get("columns", []) + ["Qty"]
+    # Archicad GUID is the last column — hidden but present as the primary key
+    columns = ["Element ID"] + schedule_def.get("columns", []) + ["Qty", "Archicad GUID"]
     _write_header_row(ws, 5, columns)
-    _write_data_rows(ws, 6, rows, columns)
+
+    # Write data — map _guid to "Archicad GUID" column
+    for i, data_row in enumerate(rows):
+        row_num = 6 + i
+        fill = ALT_ROW_FILL if i % 2 == 0 else WHITE_FILL
+        for col_idx, col_name in enumerate(columns, start=1):
+            if col_name == "Archicad GUID":
+                val = data_row.get("_guid", "")
+            else:
+                val = data_row.get(col_name, "")
+            if val is None:
+                val = ""
+            cell = ws.cell(row=row_num, column=col_idx, value=val)
+            cell.font = BODY_FONT
+            cell.fill = fill
+            cell.border = THIN_BORDER
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+
     _set_column_widths(ws)
+
+    # Hide the Archicad GUID column (last column)
+    guid_col = get_column_letter(len(columns))
+    ws.column_dimensions[guid_col].hidden = True
 
     # Freeze header row
     ws.freeze_panes = "A6"

@@ -61,6 +61,9 @@ def read_schedule_file(
                 entry[headers[col_idx]] = val
 
         if not all_empty:
+            # Map "Archicad GUID" column back to internal _guid field
+            if "Archicad GUID" in entry:
+                entry["_guid"] = entry.pop("Archicad GUID")
             entry.setdefault("_guid", "")
             entry.setdefault("_type", "")
             entry.setdefault("Qty", 1)
