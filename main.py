@@ -209,6 +209,20 @@ def step1_extract(offline: bool = False):
     for p in paths:
         print(f"    {p.name}")
 
+    # Auto-sync client portal on the server
+    registry = _load_projects()
+    proj_data = registry.get("projects", {}).get(project_slug, {})
+    dropbox_folder = proj_data.get("dropbox_folder", "")
+    active_names = [sdef["name"] for sdef in schedule_defs if schedules.get(sdef["id"])]
+
+    from ebif.portal_sync import sync_portal
+    if sync_portal(project_name, dropbox_folder, active_count, active_names):
+        from ebif.portal_sync import _derive_client_slug
+        portal_slug = _derive_client_slug(project_name)
+        print(f"  Portal: https://apps.ellisid.com/client/{portal_slug}")
+    else:
+        print("  Portal: sync skipped (no Dropbox folder or SSH unavailable)")
+
     duration = time.time() - start_time
     print()
     print(f"  Time:  {duration:.1f}s")
@@ -216,7 +230,7 @@ def step1_extract(offline: bool = False):
     print("=" * 60)
     print(f"  [OK] Step 1 complete -- {len(paths)} Excel files written")
     print(f"       Folder: {output_dir}")
-    print(f"       Fill in spec data, then run: Publish the EID Dashboard")
+    print(f"       Fill in spec data, then run: Publish the EBIF Dashboard")
     print("=" * 60)
 
 

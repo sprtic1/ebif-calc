@@ -4,20 +4,23 @@
 
 ## Command Aliases
 
-### "Run the EID Report" (Step 1 — Extract from Archicad)
+### "Run the EBIF Report" (Step 1 — Extract from Archicad)
+Also recognized as: "Run the EID Report"
 Connects to Archicad, extracts all elements with schedule toggles, and generates **individual EID-branded Excel files per schedule** (Appliances.xlsx, Furniture.xlsx, etc.) pre-populated with element IDs and any existing Archicad properties. Spec columns are included — blanks are left for manual entry. These are the **working documents**.
 
 On **first run** for a new project, asks ONE question: "Where do you want the Excel files saved?" The answer is saved in `config/projects.json` keyed by project slug. Subsequent runs use the saved path automatically.
 
 Pipeline:
 1. Connect to Archicad on the configured port (settings.json -> archicad_port)
-2. If first run for this project, ask for output folder and save to projects.json
+2. If first run for this project, ask for Dropbox project folder and save to projects.json
 3. For each of the 19 schedule categories, fetch elements where toggle = Yes
 4. For each included element, fetch all properties (Element ID, zone/room, spec data)
 5. Write individual Excel files: Summary.xlsx + {ScheduleName}.xlsx for each active schedule
-6. Print summary of elements extracted and blank fields remaining
+6. **Auto-sync client portal** — SSHes into apps.ellisid.com, creates/updates the client page at /client/{slug} AND the launcher card. No separate step needed.
+7. Print summary of elements extracted and blank fields remaining
 
-### "Publish the EID Dashboard" (Step 2 — Publish from Excel)
+### "Publish the EBIF Dashboard" (Step 2 — Publish from Excel)
+Also recognized as: "Publish the EID Dashboard"
 Reads the completed per-schedule Excel files (after manual data entry), generates the website dashboard JSON, and pushes to GitHub Pages. Also generates a QC Audit.xlsx flagging rows with missing spec data.
 
 Pipeline:
@@ -39,9 +42,9 @@ If any step fails, log the error and continue to the next step — never stop to
 **Website:** https://sprtic1.github.io/ebif-calc/
 
 ## Two-Step Workflow
-1. **Run the EID Report** -> Archicad -> Individual Excel files per schedule
+1. **Run the EBIF Report** -> Archicad -> Individual Excel files per schedule
 2. *Designer fills in specs manually in each Excel file*
-3. **Publish the EID Dashboard** -> Excel files -> Website + QC report
+3. **Publish the EBIF Dashboard** -> Excel files -> Website + QC report
 
 ## How to Run
 ```
