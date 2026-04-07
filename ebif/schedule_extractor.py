@@ -90,9 +90,14 @@ def extract_schedule(
     prop_map = schedule_def.get("properties", {})
     columns = schedule_def.get("columns", [])
 
-    # Element ID + all schedule-specific properties
+    # EBIF UID (primary key) + Element ID + all schedule-specific properties
+    # EBIF UID is auto-discovered at runtime — look it up from the resolved properties
+    ebif_uid_guid = schedule_def.get("_ebif_uid_guid", "")
     prop_guids = [P_ELEMENT_ID]
     prop_names = ["Element ID"]
+    if ebif_uid_guid:
+        prop_guids.append(ebif_uid_guid)
+        prop_names.append("EBIF UID")
     for col_name in columns:
         guid = prop_map.get(col_name)
         if guid:
@@ -105,12 +110,16 @@ def extract_schedule(
     # Map GUID keys back to readable column names
     result = []
     for row in rows:
+        ebif_uid = row.get(ebif_uid_guid, "") if ebif_uid_guid else ""
         entry = {
             "_guid": row["_guid"],
             "_type": row.get("_type", ""),
+            "EBIF UID": ebif_uid if ebif_uid else row["_guid"],
             "Element ID": row.get(P_ELEMENT_ID, ""),
         }
         for name, guid in zip(prop_names[1:], prop_guids[1:]):
+            if name in ("Element ID", "EBIF UID"):
+                continue  # already added above
             val = row.get(guid, "")
             entry[name] = val if val is not None else ""
         # Qty defaults to 1 per element

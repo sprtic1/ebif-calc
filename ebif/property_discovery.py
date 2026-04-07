@@ -129,6 +129,15 @@ def build_schedule_guid_map(
                 logger.debug("Property not found: '%s' in group '%s'", prop_name, group)
         sdef["properties"] = resolved_props
 
+    # Find EBIF UID property (primary key — in EID/EBIF GENERAL PROPERTIES)
+    ebif_uid_guid = norm_lookup.get(("GENERAL PROPERTIES", "EBIF UID"), "")
+    if ebif_uid_guid:
+        for sdef in schedule_defs:
+            sdef["_ebif_uid_guid"] = ebif_uid_guid
+        logger.info("Found EBIF UID: %s", ebif_uid_guid)
+    else:
+        logger.warning("EBIF UID property not found — using Archicad GUID as fallback")
+
     logger.info("Matched %d/%d toggles, %d property GUIDs",
                 matched_toggles, len(schedule_defs), matched_props)
     return schedule_defs

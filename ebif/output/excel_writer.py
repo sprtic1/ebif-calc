@@ -125,11 +125,11 @@ def write_schedule_file(
         name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
 
     # Data table starts at row 5
-    # Archicad GUID is the last column — hidden but present as the primary key
-    columns = ["Element ID"] + schedule_def.get("columns", []) + ["Qty", "Archicad GUID"]
+    # EBIF UID is the primary key (first column), Archicad GUID hidden at end
+    columns = ["EBIF UID", "Element ID"] + schedule_def.get("columns", []) + ["Qty", "Archicad GUID"]
     _write_header_row(ws, 5, columns)
 
-    # Write data — map _guid to "Archicad GUID" column
+    # Write data
     for i, data_row in enumerate(rows):
         row_num = 6 + i
         fill = ALT_ROW_FILL if i % 2 == 0 else WHITE_FILL

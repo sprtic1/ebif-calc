@@ -15,7 +15,7 @@ from openpyxl import load_workbook
 logger = logging.getLogger(__name__)
 
 # Columns that always come from Archicad (never preserve from Excel)
-ARCHICAD_OWNED = {"Element ID", "_guid", "_type", "Qty", "Archicad GUID"}
+ARCHICAD_OWNED = {"EBIF UID", "Element ID", "_guid", "_type", "Qty", "Archicad GUID"}
 
 
 def load_existing_data(filepath: Path) -> dict[str, dict]:
@@ -55,21 +55,26 @@ def load_existing_data(filepath: Path) -> dict[str, dict]:
         else:
             headers.append("")
 
-    # Find GUID column
-    guid_col = None
-    for i, h in enumerate(headers):
-        if h == "Archicad GUID":
-            guid_col = i
+    # Find primary key column: prefer EBIF UID, fall back to Archicad GUID
+    key_col = None
+    key_name = None
+    for preferred in ("EBIF UID", "Archicad GUID"):
+        for i, h in enumerate(headers):
+            if h == preferred:
+                key_col = i
+                key_name = preferred
+                break
+        if key_col is not None:
             break
 
-    if guid_col is None:
-        logger.info("No Archicad GUID column in %s — cannot merge", filepath.name)
+    if key_col is None:
+        logger.info("No EBIF UID or Archicad GUID column in %s -- cannot merge", filepath.name)
         return {}
 
-    # Read rows keyed by GUID
+    # Read rows keyed by the primary key
     existing = {}
     for r in range(header_row + 1, ws.max_row + 1):
-        guid = ws.cell(r, guid_col + 1).value
+        guid = ws.cell(r, key_col + 1).value
         if not guid or not str(guid).strip():
             continue
         guid = str(guid).strip()
@@ -80,7 +85,7 @@ def load_existing_data(filepath: Path) -> dict[str, dict]:
                 row[h] = val if val is not None else ""
         existing[guid] = row
 
-    logger.info("Loaded %d existing rows from %s for merge", len(existing), filepath.name)
+    logger.info("Loaded %d existing rows from %s for merge (key: %s)", len(existing), filepath.name, key_name)
     return existing
 
 
@@ -121,9 +126,10 @@ def merge_schedules(
         result = []
         preserved_count = 0
         for row in fresh_rows:
-            guid = row.get("_guid", "")
-            if guid and guid in existing:
-                old_row = existing[guid]
+            # Match by EBIF UID first, fall back to Archicad GUID
+            key = row.get("EBIF UID", "") or row.get("_guid", "")
+            if key and key in existing:
+                old_row = existing[key]
                 # Start with fresh Archicad data
                 merged_row = dict(row)
                 # For each column, if fresh value is empty but old has data, preserve it
