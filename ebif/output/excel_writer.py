@@ -134,18 +134,15 @@ def write_schedule_file(
         name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
 
     # Data table starts at row 5
-    # EBIF UID is the primary key (first column), Archicad GUID hidden at end
-    columns = ["EBIF UID", "Element ID"] + schedule_def.get("columns", []) + ["Qty", "Archicad GUID"]
+    # EBIF UID is the primary key (first column)
+    columns = ["EBIF UID", "Element ID"] + schedule_def.get("columns", []) + ["Qty"]
     _write_header_row(ws, 5, columns)
 
     # Write data — locked columns get gray background, unlocked columns are editable
     for i, data_row in enumerate(rows):
         row_num = 6 + i
         for col_idx, col_name in enumerate(columns, start=1):
-            if col_name == "Archicad GUID":
-                val = data_row.get("_guid", "")
-            else:
-                val = data_row.get(col_name, "")
+            val = data_row.get(col_name, "")
             if val is None:
                 val = ""
             cell = ws.cell(row=row_num, column=col_idx, value=val)
@@ -161,10 +158,6 @@ def write_schedule_file(
                 cell.protection = UNLOCKED
 
     _set_column_widths(ws)
-
-    # Hide the Archicad GUID column (last column)
-    guid_col = get_column_letter(len(columns))
-    ws.column_dimensions[guid_col].hidden = True
 
     # Enable sheet protection — locked cells can't be edited, unlocked cells can
     ws.protection.sheet = True

@@ -15,7 +15,7 @@ from openpyxl import load_workbook
 logger = logging.getLogger(__name__)
 
 # Columns that always come from Archicad (never preserve from Excel)
-ARCHICAD_OWNED = {"EBIF UID", "Element ID", "_guid", "_type", "Qty", "Archicad GUID"}
+ARCHICAD_OWNED = {"EBIF UID", "Element ID", "_guid", "_type", "Qty"}
 
 
 def load_existing_data(filepath: Path) -> dict[str, dict]:
@@ -58,7 +58,7 @@ def load_existing_data(filepath: Path) -> dict[str, dict]:
     # Find primary key column: prefer EBIF UID, fall back to Archicad GUID
     key_col = None
     key_name = None
-    for preferred in ("EBIF UID", "Archicad GUID"):
+    for preferred in ("EBIF UID",):
         for i, h in enumerate(headers):
             if h == preferred:
                 key_col = i
@@ -68,7 +68,7 @@ def load_existing_data(filepath: Path) -> dict[str, dict]:
             break
 
     if key_col is None:
-        logger.info("No EBIF UID or Archicad GUID column in %s -- cannot merge", filepath.name)
+        logger.info("No EBIF UID column in %s -- cannot merge", filepath.name)
         return {}
 
     # Read rows keyed by the primary key
