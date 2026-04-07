@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, Protection
 from openpyxl.utils import get_column_letter
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,15 @@ SUBTITLE_FONT = Font(name="Lato", color=WARM_GRAY, size=11)
 HEADER_FILL = PatternFill(start_color=OLIVE, end_color=OLIVE, fill_type="solid")
 ALT_ROW_FILL = PatternFill(start_color=SAGE, end_color=SAGE, fill_type="solid")
 WHITE_FILL = PatternFill(start_color=WHITE, end_color=WHITE, fill_type="solid")
+LOCKED_FILL = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+LOCKED_ALT_FILL = PatternFill(start_color="DCDCDC", end_color="DCDCDC", fill_type="solid")
+
+# Protection
+LOCKED = Protection(locked=True)
+UNLOCKED = Protection(locked=False)
+
+# Columns from Archicad that should be locked and shaded
+LOCKED_COLUMNS = {"EBIF UID", "Element ID", "TEAR SHEET #"}
 
 # Borders
 THIN_BORDER = Border(
@@ -129,10 +138,9 @@ def write_schedule_file(
     columns = ["EBIF UID", "Element ID"] + schedule_def.get("columns", []) + ["Qty", "Archicad GUID"]
     _write_header_row(ws, 5, columns)
 
-    # Write data
+    # Write data — locked columns get gray background, unlocked columns are editable
     for i, data_row in enumerate(rows):
         row_num = 6 + i
-        fill = ALT_ROW_FILL if i % 2 == 0 else WHITE_FILL
         for col_idx, col_name in enumerate(columns, start=1):
             if col_name == "Archicad GUID":
                 val = data_row.get("_guid", "")
@@ -142,15 +150,25 @@ def write_schedule_file(
                 val = ""
             cell = ws.cell(row=row_num, column=col_idx, value=val)
             cell.font = BODY_FONT
-            cell.fill = fill
             cell.border = THIN_BORDER
             cell.alignment = Alignment(vertical="center", wrap_text=True)
+
+            if col_name in LOCKED_COLUMNS:
+                cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
+                cell.protection = LOCKED
+            else:
+                cell.fill = ALT_ROW_FILL if i % 2 == 0 else WHITE_FILL
+                cell.protection = UNLOCKED
 
     _set_column_widths(ws)
 
     # Hide the Archicad GUID column (last column)
     guid_col = get_column_letter(len(columns))
     ws.column_dimensions[guid_col].hidden = True
+
+    # Enable sheet protection — locked cells can't be edited, unlocked cells can
+    ws.protection.sheet = True
+    ws.protection.enable()
 
     # Freeze header row
     ws.freeze_panes = "A6"
