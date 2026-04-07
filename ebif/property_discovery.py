@@ -113,21 +113,21 @@ def build_schedule_guid_map(
             sdef["toggle_guid"] = ""
             logger.warning("Toggle not found for '%s': group='%s'", sdef["name"], group)
 
-        # Match data properties using normalized group name
-        props = sdef.get("properties", {})
+        # Discover ALL data properties in this group directly from Archicad
+        # (ignoring whatever was hardcoded in schedules.json)
         resolved_props = {}
-        for prop_name, old_guid in props.items():
-            new_guid = norm_lookup.get((norm_group, prop_name), "")
-            if not new_guid:
-                # Try GENERAL PROPERTIES as fallback
-                new_guid = norm_lookup.get(("GENERAL PROPERTIES", prop_name), "")
-            if new_guid:
-                resolved_props[prop_name] = new_guid
-                matched_props += 1
-            else:
-                resolved_props[prop_name] = ""
-                logger.debug("Property not found: '%s' in group '%s'", prop_name, group)
+        discovered_columns = []
+        skip_names = {"INCLUDE IN", "EBIF UID"}  # toggles and UID handled separately
+        for p in all_properties:
+            if _normalize_group(p["group"]) != norm_group:
+                continue
+            if any(skip in p["name"].upper() for skip in skip_names):
+                continue
+            resolved_props[p["name"]] = p["guid"]
+            discovered_columns.append(p["name"])
+            matched_props += 1
         sdef["properties"] = resolved_props
+        sdef["columns"] = discovered_columns
 
     # Find EBIF UID property (primary key — in EID/EBIF GENERAL PROPERTIES)
     ebif_uid_guid = norm_lookup.get(("GENERAL PROPERTIES", "EBIF UID"), "")
