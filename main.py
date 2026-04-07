@@ -135,8 +135,20 @@ def step1_extract(offline: bool = False):
         logger.info("Loaded cached data: %d schedules", len(schedules))
     else:
         from ebif.api_bridge import load_connection
+        from ebif.property_discovery import discover_all_properties, build_schedule_guid_map
         from ebif.schedule_extractor import extract_all_schedules
+
         conn = load_connection(settings)
+        port = settings.get("archicad_port", 19723)
+
+        # Auto-discover property GUIDs for this project
+        print("  Discovering property GUIDs...")
+        all_props = discover_all_properties(port)
+        schedule_defs = build_schedule_guid_map(all_props, schedule_defs)
+        toggles_found = sum(1 for s in schedule_defs if s.get("toggle_guid"))
+        print(f"  Matched {toggles_found}/{len(schedule_defs)} schedule toggles")
+        print()
+
         print(f"  Extracting {len(schedule_defs)} schedules...")
         schedules = extract_all_schedules(conn, schedule_defs)
 
