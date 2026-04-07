@@ -43,16 +43,12 @@ THIN_BORDER = Border(
 )
 
 
-def _auto_width(ws, min_width: int = 10, max_width: int = 40):
-    """Auto-fit column widths based on content."""
+def _set_column_widths(ws):
+    """Set all column widths to 200 pixels (~28.5 characters in openpyxl units)."""
+    # openpyxl width is in characters; 200px ~ 28.5 chars at default font
+    COL_WIDTH = 28.5
     for col_idx in range(1, ws.max_column + 1):
-        col_letter = get_column_letter(col_idx)
-        max_len = min_width
-        for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 100), min_col=col_idx, max_col=col_idx):
-            for cell in row:
-                if cell.value:
-                    max_len = max(max_len, min(len(str(cell.value)) + 2, max_width))
-        ws.column_dimensions[col_letter].width = max_len
+        ws.column_dimensions[get_column_letter(col_idx)].width = COL_WIDTH
 
 
 def _write_header_row(ws, row: int, columns: list[str]):
@@ -132,7 +128,7 @@ def write_schedule_file(
     columns = ["Element ID"] + schedule_def.get("columns", []) + ["Qty"]
     _write_header_row(ws, 5, columns)
     _write_data_rows(ws, 6, rows, columns)
-    _auto_width(ws)
+    _set_column_widths(ws)
 
     # Freeze header row
     ws.freeze_panes = "A6"
@@ -216,7 +212,7 @@ def write_summary_file(
         cell.font = Font(name="Lato", bold=True, color=OLIVE, size=10)
         cell.border = THIN_BORDER
 
-    _auto_width(ws)
+    _set_column_widths(ws)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     filepath = output_dir / "Summary.xlsx"
@@ -250,7 +246,7 @@ def write_qc_file(
             cell.fill = fill
             cell.border = THIN_BORDER
 
-    _auto_width(ws)
+    _set_column_widths(ws)
     ws.freeze_panes = "A2"
 
     output_dir.mkdir(parents=True, exist_ok=True)
