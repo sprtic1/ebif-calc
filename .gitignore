@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Output files
+output/*.xlsx
+output/*.json
+*.xlsx
+*.json
+!config/*.json
+!tests/mock_data/*.json
+
+# Temp files
+_mcp_*.json
+_mcp_start_time
+_build_temps.py
+_arch_text.txt
+_unpacked/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

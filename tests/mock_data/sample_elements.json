@@ -1,0 +1,24 @@
+{
+  "schedules": {
+    "appliances": [
+      {"_guid": "aaa-111", "Element ID": "OBJ-001", "TEAR SHEET #": "TS-A01", "Make": "Viking", "Model": "VR36", "Specs": "36in Range", "Zone": "Kitchen", "Room": "Main Kitchen", "Qty": 1},
+      {"_guid": "aaa-222", "Element ID": "OBJ-002", "TEAR SHEET #": "TS-A02", "Make": "Sub-Zero", "Model": "BI-36", "Specs": "36in Refrigerator", "Zone": "Kitchen", "Room": "Main Kitchen", "Qty": 1}
+    ],
+    "furniture": [
+      {"_guid": "fff-111", "Element ID": "OBJ-010", "TEAR SHEET #": "TS-F01", "Vendor": "Restoration Hardware", "Model": "Cloud Sofa", "Fabric": "Belgian Linen", "Dimensions": "96x40x32", "Zone": "Living Room", "Room": "Great Room", "Qty": 1},
+      {"_guid": "fff-222", "Element ID": "OBJ-011", "TEAR SHEET #": "", "Vendor": "West Elm", "Model": "Mid-Century Chair", "Fabric": "Velvet", "Dimensions": "30x32x33", "Zone": "Living Room", "Room": "Great Room", "Qty": 2},
+      {"_guid": "fff-333", "Element ID": "OBJ-012", "TEAR SHEET #": "TS-F03", "Vendor": "CB2", "Model": "Dining Table", "Fabric": "", "Dimensions": "72x36x30", "Zone": "Dining", "Room": "Dining Room", "Qty": 1}
+    ],
+    "lighting": [
+      {"_guid": "lll-111", "Element ID": "LAMP-001", "TEAR SHEET #": "TS-L01", "Fixture Type": "Pendant", "Wattage": "60W", "Finish": "Brushed Brass", "Dimming": "Yes", "Zone": "Kitchen", "Room": "Main Kitchen", "Qty": 3},
+      {"_guid": "lll-222", "Element ID": "LAMP-002", "TEAR SHEET #": "TS-L02", "Fixture Type": "Recessed", "Wattage": "12W LED", "Finish": "White", "Dimming": "Yes", "Zone": "Living Room", "Room": "Great Room", "Qty": 8}
+    ],
+    "plumbing": [
+      {"_guid": "ppp-111", "Element ID": "OBJ-020", "TEAR SHEET #": "TS-P01", "Fixture Type": "Faucet", "Finish": "Chrome", "Model": "Kohler Purist", "Zone": "Kitchen", "Room": "Main Kitchen", "Qty": 1}
+    ],
+    "tile": [
+      {"_guid": "ttt-111", "Element ID": "OBJ-030", "TEAR SHEET #": "TS-T01", "Material": "Porcelain", "Size": "24x24", "Pattern": "Herringbone", "Grout": "Warm Gray", "Zone": "Bathroom", "Room": "Master Bath", "Qty": 1}
+    ]
+  },
+  "project_name": "Test Project - Mock Data"
+}

@@ -1,0 +1,336 @@
+{
+  "version": "1.0",
+  "note": "GUIDs discovered from McCollum - 408 Cayuse Court 29 Archicad model",
+  "schedules": [
+    {
+      "id": "appliances",
+      "name": "Appliances",
+      "group": "EID APPLIANCES",
+      "toggle_guid": "F98607F7-283E-487E-A681-61D4A9E753F8",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "F92D993D-B6CF-47B2-8964-6A101620D7DC",
+        "MANUFACTURER": "BF7EC05D-437E-4C76-8A0F-D762FD8A9E8E",
+        "MODEL #": "1C14E023-2A51-4D40-83EB-53E82C13C7CC",
+        "SIZE": "F91AA4FA-0374-4FDF-B2B3-416657A4F11B",
+        "FINISH": "E9316F81-13C0-4EEF-B41E-C9F4DF5FEE97",
+        "COST": "6CB2BC79-04EF-4712-82E5-3858A6785632",
+        "NOTES": "A99F2CA0-AF66-4576-BE34-7DE9DE9053A2",
+        "URL": "B4567CD9-99A9-4CDC-808C-10D76638F5AD"
+      },
+      "columns": ["TEAR SHEET #", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "COST", "NOTES"]
+    },
+    {
+      "id": "bath_accessories",
+      "name": "Bath Accessories",
+      "group": "EID BATH ACCESSORIES",
+      "toggle_guid": "AFBC71EF-4FF7-4B95-AC8B-ED8865944607",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "71A7A443-5365-4943-8365-BBE7D63ED715",
+        "MANUFACTURER": "38DE2401-4C3C-4DF1-B521-E1FBB70A1D16",
+        "MODEL #": "DCF1010D-AAF8-432F-B7AA-24776C4E3A49",
+        "SIZE": "083AB088-41FE-48BB-B7E0-3BE8904B0D35",
+        "FINISH": "84F99B9B-0180-444E-A966-6608398814B6",
+        "COST": "9391E23F-1698-4CB2-961C-4F404EC9F5EB",
+        "NOTES": "E9530B16-350E-4910-97F3-7B06ED16433C",
+        "URL": "226DC5A4-3AAA-4579-9079-E703EE34C4B0"
+      },
+      "columns": ["TEAR SHEET #", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "COST", "NOTES"]
+    },
+    {
+      "id": "cabinetry_hardware",
+      "name": "Cabinetry Hardware",
+      "group": "EID CABINETRY HARDWARE",
+      "toggle_guid": "F17C2C34-A730-4993-8ED6-E76E4E154932",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "7B842821-589C-4FA8-AA52-13562E399A4C",
+        "TYPE": "C782DB1B-F584-4AF7-9331-1B3E4A1BD284",
+        "MANUFACTURER": "229BC931-2737-41AD-87EE-2254477D1319",
+        "MODEL #": "8E5E6400-6BB9-4EB0-860A-B565150779EB",
+        "SIZE": "8163B45E-0754-4EAA-80C8-E8AA162E50D2",
+        "FINISH": "3B82EC73-DEC1-4E85-B37E-6C43085F682D",
+        "COST": "E1942B01-E283-4854-82C9-062F89D6C60B",
+        "NOTES": "EBD508B3-A89D-4056-AFC2-C5AD4791B18F",
+        "URL": "9368DC21-DADD-4243-A783-CA4CBD334DC1"
+      },
+      "columns": ["TEAR SHEET #", "TYPE", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "COST", "NOTES"]
+    },
+    {
+      "id": "cabinetry_inserts",
+      "name": "Cabinetry Inserts",
+      "group": "EID CABINETRY INSERTS",
+      "toggle_guid": "402C48CE-3AE2-4AE3-927C-0C6344931CAB",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "45DC8E46-F05A-4570-BA44-4D553A1CC383",
+        "NAME": "FE88EB44-963E-468D-9F97-6E1D07E63B5F",
+        "MANUFACTURER": "256D8E82-2E07-4DAB-85C3-54C3DB310E20",
+        "MODEL #": "076DDD27-DE7A-4993-A4BC-1946E0ED5732",
+        "SIZE": "9AE0598E-7FFD-4853-9918-478A75C60FE2",
+        "FINISH": "F9D30FDC-7716-4328-A1C9-4245D152E3C0",
+        "COST": "51B3483E-5F2F-4CC7-BC53-FF61BDF140ED",
+        "NOTES": "AD9AC9FE-D814-4306-B5C1-9BE1B9A9F98F",
+        "URL": "B2CF527F-A51A-477A-8ECA-47D2740DF76D"
+      },
+      "columns": ["TEAR SHEET #", "NAME", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "COST", "NOTES"]
+    },
+    {
+      "id": "cabinetry_style",
+      "name": "Cabinetry Style & Species",
+      "group": "EID CABINETRY STYLE & SPECIES",
+      "toggle_guid": "23CF550E-45E1-4B9E-8BC9-AA10E81C39F6",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "00EBCE3F-0AA7-42C6-9639-137C067B3937",
+        "STYLE": "FBC883C2-4AFB-41B1-A2F1-2DE12105DFE2",
+        "MATERIAL": "D0D406C9-7174-478E-ABA5-112A9BBA1965",
+        "FINISH": "D1C3F288-655B-47D4-A428-D211F9C80D59",
+        "SAMPLE #": "FA93A45A-3A44-41EA-9F66-06FE0C64FF78",
+        "NOTES": "0F1D3AAA-58CB-4B06-BE7E-4D7574FDD6C6",
+        "URL": "1D68B812-683E-47E4-8829-1CDF19CE6E6A"
+      },
+      "columns": ["TEAR SHEET #", "STYLE", "MATERIAL", "FINISH", "SAMPLE #", "NOTES"]
+    },
+    {
+      "id": "countertops",
+      "name": "Countertops",
+      "group": "EID COUNTERTOPS",
+      "toggle_guid": "34680DA6-824B-4ADE-B458-AE8ACAAF588B",
+      "element_types": ["Object", "Morph", "Slab"],
+      "properties": {
+        "TEAR SHEET #": "CA816B91-9001-426D-814C-3A4AE22D14F5",
+        "MATERIAL": "8DC19478-1AB7-44AC-8B75-1B39B69C6E0A",
+        "FINISH/COLOR": "52B418FF-4126-4720-9725-A7E93EAE214B",
+        "EDGE DETAIL": "1ECA8F6C-11CD-4AF7-8718-0985BB8095F9",
+        "THICKNESS": "9D786B14-20DC-4F0B-8350-BAE334676ADC",
+        "SPLASH": "BB7C41F4-C733-4D9A-A3A5-04E82E398DE8",
+        "SOURCE": "3408CB75-32F6-4754-906A-CC071E3AC5BD",
+        "NOTES": "DC353A4F-B0FE-4046-955D-BC116F112C56"
+      },
+      "columns": ["TEAR SHEET #", "MATERIAL", "FINISH/COLOR", "EDGE DETAIL", "THICKNESS", "SPLASH", "SOURCE", "NOTES"]
+    },
+    {
+      "id": "covering_calc",
+      "name": "Covering Calculations",
+      "group": "EID COVERING CALCULATIONS*",
+      "toggle_guid": "DBB11FC5-4567-4BF6-AF3A-B639438381F9",
+      "element_types": ["Object", "Morph", "Slab"],
+      "properties": {
+        "Area Per Box of Tile": "722E8923-8B5E-436E-A281-DCED64CD472C",
+        "Covering Waste Percentage": "465EB6DD-5507-460F-BBA0-566018C30AE8",
+        "Area of Total Covering including Waste": "C4D8D82F-E3FE-47CF-8737-F391196174BB",
+        "Cost per sqft of Covering": "405DD214-404D-44B6-8E2A-0111C6506CE3",
+        "Cost of Total Covering": "E1DA18D0-F74A-4F8A-B0E5-519FFBF92DA3",
+        "Cost of Total Covering including Waste": "F5266F23-02BB-44AD-8710-52BC30556935",
+        "Number of Boxes of Tile": "85D45CAB-742D-4EA0-9077-E263614633B6"
+      },
+      "columns": ["Area Per Box of Tile", "Covering Waste Percentage", "Area of Total Covering including Waste", "Cost per sqft of Covering", "Number of Boxes of Tile"]
+    },
+    {
+      "id": "decorative_lighting",
+      "name": "Decorative Lighting",
+      "group": "EID DECORATIVE LIGHTING",
+      "toggle_guid": "AF5974E1-A04E-4F09-81EF-843716D4277F",
+      "element_types": ["Lamp", "Object"],
+      "properties": {
+        "TEAR SHEET #": "448B212B-3814-4200-AC10-0BE4FCB00251",
+        "MANUFACTURER": "3A541CDB-4339-4671-9D26-FBCED4A14F2E",
+        "MODEL #": "891045E3-8A94-459E-9A0C-D99FAA630A4C",
+        "SIZE": "0D2BC28F-A869-48FE-96BC-CA0ECBD5E9B7",
+        "FINISH": "B98B0F09-C1DF-4E6D-8DDC-0F7FC7E62BD6",
+        "WATTAGE": "F3D12374-1334-477B-BD3D-34AD14A73FE3",
+        "J-BOX": "3DF879B2-D93E-40FF-B8A9-8968C3739FB0",
+        "COST": "2E6B1342-17ED-45AF-BF33-9E375F69B444",
+        "NOTES": "5DEEBE04-2155-47FC-B80F-94F878A6FD5D",
+        "URL": "9900ED78-D5C4-4389-9B16-5ED6A6C20E34"
+      },
+      "columns": ["TEAR SHEET #", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "WATTAGE", "J-BOX", "COST", "NOTES"]
+    },
+    {
+      "id": "door_hardware",
+      "name": "Door Hardware",
+      "group": "EID DOOR HARDWARE",
+      "toggle_guid": "7A32CA85-2BEF-4609-8B98-BD0388C13D1D",
+      "element_types": ["Object", "Door"],
+      "properties": {
+        "TEAR SHEET #": "EC5A031B-0408-4452-8BAB-3D08AD7E8C20",
+        "TYPE": "29A73F06-2C14-4D53-8252-52D7241EE285",
+        "STYLE": "A1DF4F3B-DC66-444F-A55D-78596E99D7C3",
+        "FINISH": "FD13152A-EA0C-406A-9D5A-51DBFEFD229C",
+        "DOOR FINISH": "17BB573D-0F2B-410B-B23D-20F8B17BB80B",
+        "COST": "6042E533-CE50-46AF-A117-1557BFF3B107"
+      },
+      "columns": ["TEAR SHEET #", "TYPE", "STYLE", "FINISH", "DOOR FINISH", "COST"]
+    },
+    {
+      "id": "doors",
+      "name": "Doors",
+      "group": "EID DOORS",
+      "toggle_guid": "07B6B610-5F87-46D6-A369-370F75948037",
+      "element_types": ["Door"],
+      "properties": {
+        "TEAR SHEET #": "FC2D36C5-B801-4EBC-9114-8904B1481894",
+        "COST": "09EDEFB5-F4DD-4009-AE29-742E8799EB93",
+        "NOTES": "C242C947-4978-4CB7-BF3B-9A07327E0AAE"
+      },
+      "columns": ["TEAR SHEET #", "COST", "NOTES"]
+    },
+    {
+      "id": "flooring",
+      "name": "Flooring",
+      "group": "EID FLOORING",
+      "toggle_guid": "3E9F7DB8-2B0E-4817-94CE-40D4E4AEAE5C",
+      "element_types": ["Object", "Slab", "Morph"],
+      "properties": {
+        "TEAR SHEET #": "191A2F3E-9C89-4B61-98C9-949925EBAA18",
+        "TYPE": "1A4CCB04-62DC-482F-B29A-3AE236B13096",
+        "MANUFACTURER": "E74D47DD-E5C0-4048-8FE9-70AD98774DAF",
+        "DESCRIPTION": "0C46BA5E-0437-4DCA-A502-90AE4B52C1E5",
+        "COLOR": "169BBEE9-8357-473D-B818-D0E6E3BAE241",
+        "COST": "168F6C15-FB47-43AC-9888-C88866DBCDB9",
+        "NOTES": "2BD5F582-CB3D-4613-97AF-9B0EB5B75309"
+      },
+      "columns": ["TEAR SHEET #", "TYPE", "MANUFACTURER", "DESCRIPTION", "COLOR", "COST", "NOTES"]
+    },
+    {
+      "id": "furniture",
+      "name": "Furniture",
+      "group": "EID FURNITURE",
+      "toggle_guid": "75831AF6-B0DA-4729-B4C2-6138C55D86D6",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "032F63AC-62B3-467E-9A83-682B3C9206A1",
+        "ITEM": "D11CEE13-2292-4B54-ADA5-633E43C3D668",
+        "MANUFACTURER": "8C821423-8DC6-482E-89BF-7F296C007720",
+        "MODEL #": "029B1B4A-F5C7-47B8-9C4B-A66A6FCAE2E5",
+        "SIZE": "41C91109-D0BF-4490-9D25-7174880F373E",
+        "FINISH": "45FFD0C5-4330-4081-B8CD-C019D8BEEDC3",
+        "STATUS": "A12DD05B-E62E-4DC0-9CBB-28945E547E4D",
+        "COST": "3B0D37D0-4471-4097-9BD8-F4D28375867E",
+        "URL": "CFBB9E15-F8CD-489A-AA99-2965672A538A"
+      },
+      "columns": ["TEAR SHEET #", "ITEM", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "STATUS", "COST"]
+    },
+    {
+      "id": "lighting_electrical",
+      "name": "Lighting & Electrical",
+      "group": "EID LIGHTING & ELECTRICAL",
+      "toggle_guid": "3D92BC2B-9450-4667-A955-8EF744F8D858",
+      "element_types": ["Lamp", "Object"],
+      "properties": {
+        "TEAR SHEET #": "69B85769-F773-4AC8-BFB4-4A1C0B8B8E49",
+        "MANUFACTURER": "D1A56F51-9C9B-45B7-B7D2-33B2D7A21D45",
+        "MODEL #": "499A1EBF-CE91-4248-B63D-6BBF7532539E",
+        "SIZE": "C76D079A-546F-4B61-8B9C-A3833D4C6F00",
+        "FINISH": "8CFEA604-3C1A-41E4-9A3F-A0685FF8B27A",
+        "WATTAGE": "0DC0D53B-FAE0-46A3-955C-6C9156CC6D50",
+        "J-BOX": "20CDAE38-BCBB-4536-AB88-B581FD3F543E",
+        "COST": "972F4D0F-007C-42D7-8C35-202BC1421E61",
+        "NOTES": "F95D4F98-792C-46C3-B49A-5F6EF171A3FC",
+        "URL": "56B02EE4-7412-47A5-BE7F-7381844CEF14"
+      },
+      "columns": ["TEAR SHEET #", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "WATTAGE", "J-BOX", "COST", "NOTES"]
+    },
+    {
+      "id": "plumbing",
+      "name": "Plumbing",
+      "group": "EID PLUMBING",
+      "toggle_guid": "549D5094-6BAF-4DF5-A89D-9F54D1487462",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "43C48E7F-24C2-4F01-9A7E-B0858E360F3E",
+        "MANUFACTURER": "580A9631-E8E9-4D47-8AFC-BB6140BFFFC3",
+        "MODEL #": "57A8CE87-0F23-4F6D-9B56-12C5C483056B",
+        "SIZE": "FA071F93-C72B-413F-B928-EC7D38E915A3",
+        "FINISH": "73320CE5-F6D6-4435-9210-7B2B1A5BF932",
+        "COST": "C80497A4-1EE7-4B30-B457-9BD1729E37BD",
+        "NOTES": "E0569B24-D9CD-4F35-AF90-28FD55FA84CA",
+        "URL": "8C58779D-79B8-4ED2-B577-E5493D696B3B"
+      },
+      "columns": ["TEAR SHEET #", "MANUFACTURER", "MODEL #", "SIZE", "FINISH", "COST", "NOTES"]
+    },
+    {
+      "id": "shower_glass_mirrors",
+      "name": "Shower Glass & Mirrors",
+      "group": "EID SHOWER GLASS & MIRRORS",
+      "toggle_guid": "AB811D76-AF83-4599-9112-4631EA984459",
+      "element_types": ["Object", "Morph"],
+      "properties": {
+        "TEAR SHEET #": "ED1A66C9-6A55-4AFF-9B65-D54193FB32A8",
+        "TYPE": "BEB0EAC8-5E0B-4F5A-875D-D70BFEA2F865",
+        "STYLE": "EACF5A5F-C70C-4C99-B65F-5B48D9E66B03",
+        "THICKNESS": "0A9647C8-CC56-4574-ABD4-137A0D101849",
+        "HINGE TYPE": "E476B4CD-FCFC-472D-AEE6-9F33FF54AE74",
+        "HINGE HARDWARE": "AB47FA2D-6630-4B1F-B125-CF98A0E0E928",
+        "HINGE FINISH": "73CDD6DF-02FC-4971-B240-4468E7774783",
+        "NOTES": "0AB9F23C-703E-481E-B628-85EF44D1851C"
+      },
+      "columns": ["TEAR SHEET #", "TYPE", "STYLE", "THICKNESS", "HINGE TYPE", "HINGE HARDWARE", "HINGE FINISH", "NOTES"]
+    },
+    {
+      "id": "specialty_equipment",
+      "name": "Specialty Equipment",
+      "group": "EID SPECIALTY EQUIPMENT",
+      "toggle_guid": "560AB287-615D-4F4B-87DF-CA6B1662C764",
+      "element_types": ["Object"],
+      "properties": {
+        "TEAR SHEET #": "4E497955-F457-4198-8692-C88FC3A54C5F",
+        "TYPE": "44043A6B-5650-4044-A2AD-4FBDAF16AC5A",
+        "STYLE": "F32806AB-DC7C-4AFF-9112-D6A1587BDE51",
+        "THICKNESS": "A6F8BCB0-3564-420D-9EAD-4A37D14D6786",
+        "NOTES": "AB91ACE2-69DA-4464-A87C-FAD1984B6EBF"
+      },
+      "columns": ["TEAR SHEET #", "TYPE", "STYLE", "THICKNESS", "NOTES"]
+    },
+    {
+      "id": "surface_finishes",
+      "name": "Surface Finishes",
+      "group": "EID SURFACE FINISHES",
+      "toggle_guid": "3B925502-2076-4CBE-AE8A-FE9B62534012",
+      "element_types": ["Object", "Morph", "Slab"],
+      "properties": {
+        "TEAR SHEET #": "713E0CF2-17E8-4B36-95B8-93FF209481C2",
+        "WALL": "4749036A-2911-42C9-B666-146EC4F163EE",
+        "WALL FINISH": "3D18DC69-9577-4486-9D2D-3D0E29F5531F",
+        "CEILING": "F09394F8-F310-446E-994A-009BC83AC7CE",
+        "CEILING FINISH": "A1730F1E-9896-4055-AB57-A64C2C31374F",
+        "NOTES": "23D4D879-384A-40FB-BA98-22556E5B03E2"
+      },
+      "columns": ["TEAR SHEET #", "WALL", "WALL FINISH", "CEILING", "CEILING FINISH", "NOTES"]
+    },
+    {
+      "id": "tile",
+      "name": "Tile",
+      "group": "EID TILE",
+      "toggle_guid": "812C8180-2300-49C3-9E9C-7FC2C1FE3B85",
+      "element_types": ["Object", "Morph", "Slab"],
+      "properties": {
+        "TEAR SHEET #": "F7702FEA-9688-42F4-8DB9-5B0274AE5158",
+        "MATERIAL": "F0B541EB-2968-4DC2-9DAC-F42797114A4C",
+        "FINISH/COLOR": "04B8B1DB-6443-4E59-9A98-B1627A6BE383",
+        "SIZE": "E85DCAF6-3907-4E8C-AEC2-EBB2D472F92D",
+        "THICKNESS": "73B41179-3C2A-4DCB-869D-96FAB100AC8C",
+        "EDGE DETAIL": "E9718314-6FFA-4879-81C4-1F691A394DD0",
+        "GROUT": "079A1CC3-CF34-4036-A4EA-DA535BB10854",
+        "SOURCE": "E17F48EC-A8E8-4BC4-99E6-85A6FE23339C",
+        "COST": "974C3649-28E3-4F29-895B-44F213287A65",
+        "NOTES": "CAD33788-708B-4A45-A2DF-89B13DC47D8E"
+      },
+      "columns": ["TEAR SHEET #", "MATERIAL", "FINISH/COLOR", "SIZE", "THICKNESS", "GROUT", "SOURCE", "COST", "NOTES"]
+    },
+    {
+      "id": "windows",
+      "name": "Windows",
+      "group": "EID WINDOWS",
+      "toggle_guid": "66905CA6-813B-4E1E-852A-A958087D44BD",
+      "element_types": ["Window"],
+      "properties": {
+        "COST": "8D80C28C-9EC7-4FFC-93CB-D5DCA5D4E8F6",
+        "NOTES": "F48174D3-0C75-4873-9F9B-C1D3DC43F715"
+      },
+      "columns": ["COST", "NOTES"]
+    }
+  ]
+}

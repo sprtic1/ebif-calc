@@ -1,0 +1,17 @@
+{
+  "archicad_port": 19723,
+  "dropbox_root": "C:\\Users\\linco\\EID Dropbox",
+  "website_repo": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\CLAUDE\\CLAUDE CODE\\EBIF-WEBSITE\\ebif-calc",
+  "output_folder": "",
+  "github_user": "sprtic1",
+  "github_repo": "ebif-calc",
+  "project_name": "McCollum - 408 Cayuse Court 29",
+  "branding": {
+    "header_color": "868C54",
+    "alt_row_color": "C2C8A2",
+    "accent_color": "737569",
+    "heading_font": "Lato",
+    "body_font": "Arial Narrow",
+    "title_font": "Gowun Batang"
+  }
+}
