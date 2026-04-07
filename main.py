@@ -64,7 +64,8 @@ def _save_projects(data: dict):
 def get_output_dir(project_slug: str, project_name: str) -> Path:
     """Get the output directory for a project.
 
-    On first run for a new project, prompts for the path and saves it.
+    On first run for a new project, asks for the Dropbox project folder path,
+    creates a SCHEDULES subfolder inside it, and saves both paths to projects.json.
     On subsequent runs, uses the saved path automatically.
     """
     registry = _load_projects()
@@ -77,26 +78,42 @@ def get_output_dir(project_slug: str, project_name: str) -> Path:
             logger.info("Using saved output path for '%s': %s", project_name, p)
             return p
 
-    # First run for this project -- ask the user
+    # First run for this project -- ask for the Dropbox project folder
     print()
     print(f"  First run for project: {project_name}")
-    answer = input("  Where do you want the Excel files saved for this project?\n  > ").strip()
+    print(f"  Schedules will be saved to a SCHEDULES subfolder inside the project folder.")
+    answer = input("  What is the Dropbox project folder path for this client?\n  > ").strip()
 
     if not answer:
         answer = str(BASE / "output")
         print(f"  (Using default: {answer})")
+        out_path = Path(answer)
+        dropbox_folder = ""
+    else:
+        project_folder = Path(answer)
+        out_path = project_folder / "SCHEDULES"
+        # Derive the Dropbox API path from the local path
+        # Local: C:\Users\linco\EID Dropbox\PROJECTS\CLIENT NAME\...
+        # API:   /PROJECTS/CLIENT NAME/...
+        dropbox_folder = ""
+        local_str = str(project_folder).replace("\\", "/")
+        idx = local_str.upper().find("/EID DROPBOX/")
+        if idx >= 0:
+            dropbox_folder = local_str[idx + len("/EID DROPBOX"):]
 
-    out_path = Path(answer)
     out_path.mkdir(parents=True, exist_ok=True)
 
     # Save to projects.json
     projects[project_slug] = {
         "name": project_name,
         "output_path": str(out_path),
+        "dropbox_folder": dropbox_folder,
     }
     registry["projects"] = projects
     _save_projects(registry)
     logger.info("Saved output path for '%s': %s", project_slug, out_path)
+    if dropbox_folder:
+        logger.info("Dropbox API path: %s", dropbox_folder)
 
     return out_path
 

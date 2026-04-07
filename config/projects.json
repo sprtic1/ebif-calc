@@ -3,11 +3,13 @@
   "projects": {
     "mccollum-408-cayuse-court-29": {
       "name": "McCollum - 408 Cayuse Court 29",
-      "output_path": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\ARCHICAD\\ELLIS INTERIOR DESIGN GROUP\\EXCEL - CLAUDE"
+      "output_path": "C:\\Users\\linco\\EID Dropbox\\PROJECTS\\MCCOLLUM - 408 CAYUSE COURT\\SCHEDULES",
+      "dropbox_folder": "/PROJECTS/MCCOLLUM - 408 CAYUSE COURT"
     },
     "goulet-13-chateau-circle-29": {
       "name": "Goulet - 13 Chateau Circle 29",
-      "output_path": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\ARCHICAD\\ELLIS INTERIOR DESIGN GROUP\\EXCEL - CLAUDE\\GOULET"
+      "output_path": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\ARCHICAD\\ELLIS INTERIOR DESIGN GROUP\\EXCEL - CLAUDE\\GOULET",
+      "dropbox_folder": ""
     }
   }
 }
