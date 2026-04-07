@@ -5,25 +5,28 @@
 ## Command Aliases
 
 ### "Run the EID Report" (Step 1 — Extract from Archicad)
-Connects to Archicad, extracts all elements with schedule toggles, and generates an EID-branded Excel **template** pre-populated with element IDs, zones, room names, and any existing Archicad properties. Spec columns (vendor, model, finish, fabric, tear sheet #, cost, etc.) are included and filled with whatever Archicad already has — blanks are left for manual entry. This Excel is the **working document**.
+Connects to Archicad, extracts all elements with schedule toggles, and generates **individual EID-branded Excel files per schedule** (Appliances.xlsx, Furniture.xlsx, etc.) pre-populated with element IDs and any existing Archicad properties. Spec columns are included — blanks are left for manual entry. These are the **working documents**.
+
+On **first run** for a new project, asks ONE question: "Where do you want the Excel files saved?" The answer is saved in `config/projects.json` keyed by project slug. Subsequent runs use the saved path automatically.
 
 Pipeline:
 1. Connect to Archicad on the configured port (settings.json -> archicad_port)
-2. For each of the 19 schedule categories, fetch elements where toggle = Yes
-3. For each included element, fetch all properties (Element ID, zone/room, spec data)
-4. Generate EID-branded Excel template at `output/ebif_schedule_{project_slug}.xlsx`
-5. Print summary of elements extracted and blank fields remaining
+2. If first run for this project, ask for output folder and save to projects.json
+3. For each of the 19 schedule categories, fetch elements where toggle = Yes
+4. For each included element, fetch all properties (Element ID, zone/room, spec data)
+5. Write individual Excel files: Summary.xlsx + {ScheduleName}.xlsx for each active schedule
+6. Print summary of elements extracted and blank fields remaining
 
 ### "Publish the EID Dashboard" (Step 2 — Publish from Excel)
-Reads the completed Excel working document (after manual data entry), generates the website dashboard JSON, and pushes to GitHub Pages. Also generates a QC report flagging any rows with missing spec data.
+Reads the completed per-schedule Excel files (after manual data entry), generates the website dashboard JSON, and pushes to GitHub Pages. Also generates a QC Audit.xlsx flagging rows with missing spec data.
 
 Pipeline:
-1. Read the Excel file at `output/ebif_schedule_{project_slug}.xlsx`
-2. Parse all schedule tabs back into structured data
+1. Read individual Excel files from the project's saved output folder
+2. Parse each {ScheduleName}.xlsx back into structured data
 3. Run QC checks — flag rows missing TEAR SHEET #, vendor, model, or other required fields
 4. Generate JSON for website dashboard
 5. Deploy to GitHub Pages (commit + push)
-6. Generate a fresh Excel with QC tab appended
+6. Update schedule files + generate QC Audit.xlsx
 7. Print summary with completion metrics and QC flags
 
 If any step fails, log the error and continue to the next step — never stop to ask what to do.
@@ -36,15 +39,28 @@ If any step fails, log the error and continue to the next step — never stop to
 **Website:** https://sprtic1.github.io/ebif-calc/
 
 ## Two-Step Workflow
-1. **Run the EID Report** → Archicad → Excel template (working document)
-2. *Designer fills in specs manually in Excel*
-3. **Publish the EID Dashboard** → Excel → Website + QC report
+1. **Run the EID Report** -> Archicad -> Individual Excel files per schedule
+2. *Designer fills in specs manually in each Excel file*
+3. **Publish the EID Dashboard** -> Excel files -> Website + QC report
 
 ## How to Run
 ```
-python main.py extract        # Step 1: Archicad → Excel template
-python main.py publish         # Step 2: Excel → Website + QC
+python main.py extract        # Step 1: Archicad -> per-schedule Excel files
+python main.py publish         # Step 2: Excel files -> Website + QC
 python main.py extract --offline  # Use cached data (testing)
+```
+
+## Project Output Paths
+Output paths are stored per-project in `config/projects.json`. On first run for a new project, the pipeline asks where to save files. Example:
+```json
+{
+  "projects": {
+    "mccollum-408-cayuse-court-29": {
+      "name": "McCollum - 408 Cayuse Court 29",
+      "output_path": "C:\\Users\\linco\\EID Dropbox\\PROJECTS\\McCollum\\Schedules"
+    }
+  }
+}
 ```
 
 ## Folder Structure

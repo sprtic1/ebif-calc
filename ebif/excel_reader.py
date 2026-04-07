@@ -1,7 +1,9 @@
-"""Excel Reader — reads a completed EID schedule workbook back into pipeline data.
+"""Excel Reader — reads completed EID schedule files back into pipeline data.
 
-Used in Step 2 (Publish) to read the working document after manual data entry
-and convert it back into structured schedule data for the website dashboard.
+Used in Step 2 (Publish) to read the individual schedule Excel files after
+manual data entry and convert them back into structured schedule data.
+
+Reads individual files: Appliances.xlsx, Furniture.xlsx, etc.
 """
 
 import logging
@@ -12,81 +14,40 @@ from openpyxl import load_workbook
 logger = logging.getLogger(__name__)
 
 
-def read_workbook(
+def read_schedule_file(
     filepath: Path,
-    schedule_defs: list[dict],
-) -> dict[str, list[dict]]:
-    """Read an EID schedule Excel workbook and return structured schedule data.
+    schedule_def: dict,
+) -> list[dict]:
+    """Read a single schedule Excel file and return row data.
 
-    Args:
-        filepath: Path to the .xlsx file
-        schedule_defs: Schedule definitions from schedules.json
-
-    Returns:
-        Dict mapping schedule_id -> list of row dicts (same format as extractor output).
+    Expects the data table to start at row 5 (header) with data from row 6,
+    matching the write_schedule_file format. Falls back to row 1 header if
+    row 5 doesn't look like a header.
     """
     wb = load_workbook(str(filepath), data_only=True)
-    logger.info("Reading workbook: %s (%d sheets)", filepath.name, len(wb.sheetnames))
+    ws = wb.active
 
-    # Build a lookup from tab name -> schedule def
-    tab_to_def: dict[str, dict] = {}
-    for sdef in schedule_defs:
-        tab_name = sdef["name"][:31]  # Excel max 31 chars
-        tab_to_def[tab_name] = sdef
-
-    schedules: dict[str, list[dict]] = {}
-
-    for sheet_name in wb.sheetnames:
-        # Skip non-schedule tabs
-        if sheet_name in ("Summary", "QC Audit"):
-            continue
-
-        sdef = tab_to_def.get(sheet_name)
-        if not sdef:
-            logger.debug("Skipping unknown sheet: %s", sheet_name)
-            continue
-
-        ws = wb[sheet_name]
-        rows = _read_sheet(ws)
-        schedules[sdef["id"]] = rows
-        logger.info("Read '%s': %d rows", sheet_name, len(rows))
-
-    # Initialize empty lists for schedules not found in workbook
-    for sdef in schedule_defs:
-        if sdef["id"] not in schedules:
-            schedules[sdef["id"]] = []
-
-    total = sum(len(v) for v in schedules.values())
-    active = sum(1 for v in schedules.values() if v)
-    logger.info("Read %d elements across %d active schedules", total, active)
-    return schedules
-
-
-def _read_sheet(ws) -> list[dict]:
-    """Read a single worksheet into a list of row dicts.
-
-    Assumes row 1 is the header row, data starts at row 2.
-    """
-    rows = list(ws.iter_rows(min_row=1, values_only=False))
-    if not rows:
+    # Try row 5 first (standard template format), fall back to row 1
+    rows_data = list(ws.iter_rows(min_row=1, values_only=False))
+    if not rows_data:
         return []
 
-    # Extract header names from row 1
-    header_row = rows[0]
+    header_row_idx = _find_header_row(rows_data)
+    if header_row_idx is None:
+        logger.warning("No header row found in %s", filepath.name)
+        return []
+
     headers = []
-    for cell in header_row:
+    for cell in rows_data[header_row_idx]:
         val = cell.value
-        if val is not None:
-            headers.append(str(val).strip())
-        else:
-            headers.append("")
+        headers.append(str(val).strip() if val is not None else "")
 
     if not any(headers):
         return []
 
-    # Read data rows
+    # Read data rows after header
     result = []
-    for row in rows[1:]:
+    for row in rows_data[header_row_idx + 1:]:
         entry = {}
         all_empty = True
         for col_idx, cell in enumerate(row):
@@ -99,9 +60,7 @@ def _read_sheet(ws) -> list[dict]:
                     val = ""
                 entry[headers[col_idx]] = val
 
-        # Skip completely empty rows
         if not all_empty:
-            # Add internal fields for compatibility
             entry.setdefault("_guid", "")
             entry.setdefault("_type", "")
             entry.setdefault("Qty", 1)
@@ -110,20 +69,50 @@ def _read_sheet(ws) -> list[dict]:
     return result
 
 
-def find_workbook(output_dir: Path, project_slug: str) -> Path | None:
-    """Find the schedule workbook for a project.
-
-    Looks for ebif_schedule_{slug}.xlsx in the output directory.
-    Returns the path or None if not found.
-    """
-    expected = output_dir / f"ebif_schedule_{project_slug}.xlsx"
-    if expected.exists():
-        return expected
-
-    # Fallback: look for any ebif_schedule_*.xlsx
-    candidates = sorted(output_dir.glob("ebif_schedule_*.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
-    if candidates:
-        logger.info("Using most recent workbook: %s", candidates[0].name)
-        return candidates[0]
-
+def _find_header_row(rows_data: list) -> int | None:
+    """Find the header row index (0-based) by looking for 'Element ID'."""
+    for i, row in enumerate(rows_data[:10]):  # check first 10 rows
+        for cell in row:
+            if cell.value and str(cell.value).strip() == "Element ID":
+                return i
     return None
+
+
+def read_all_schedules(
+    output_dir: Path,
+    schedule_defs: list[dict],
+) -> dict[str, list[dict]]:
+    """Read all individual schedule Excel files from the output directory.
+
+    Looks for {ScheduleName}.xlsx for each schedule definition.
+    Returns dict mapping schedule_id -> list of row dicts.
+    """
+    schedules: dict[str, list[dict]] = {}
+    files_read = 0
+
+    for sdef in schedule_defs:
+        sname = sdef["name"]
+        filepath = output_dir / f"{sname}.xlsx"
+
+        if filepath.exists():
+            rows = read_schedule_file(filepath, sdef)
+            schedules[sdef["id"]] = rows
+            if rows:
+                files_read += 1
+                logger.info("Read '%s': %d rows", filepath.name, len(rows))
+        else:
+            schedules[sdef["id"]] = []
+
+    total = sum(len(v) for v in schedules.values())
+    active = sum(1 for v in schedules.values() if v)
+    logger.info("Read %d files: %d elements across %d active schedules", files_read, total, active)
+    return schedules
+
+
+def has_schedule_files(output_dir: Path, schedule_defs: list[dict]) -> bool:
+    """Check if any schedule Excel files exist in the output directory."""
+    for sdef in schedule_defs:
+        filepath = output_dir / f"{sdef['name']}.xlsx"
+        if filepath.exists():
+            return True
+    return False

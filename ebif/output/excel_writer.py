@@ -1,9 +1,7 @@
-"""EID-Branded Excel Writer — generates multi-tab workbook with all schedules.
+"""EID-Branded Excel Writer — generates individual Excel files per schedule.
 
-Two modes:
-  - Template mode (Step 1): Pre-populated with Archicad data, blanks for manual entry.
-    Uses a stable filename so the user edits and re-saves in place.
-  - Final mode (Step 2): Full workbook with QC tab after publish.
+Each active schedule gets its own file: Appliances.xlsx, Furniture.xlsx, etc.
+Plus a Summary.xlsx with overview and a QC Audit.xlsx for publish mode.
 
 Uses EID brand colors: Olive #868C54, Sage #C2C8A2, Warm Gray #737569.
 """
@@ -13,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, NamedStyle
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 logger = logging.getLogger(__name__)
@@ -30,13 +28,11 @@ HEADER_FONT = Font(name="Lato", bold=True, color=WHITE, size=10)
 BODY_FONT = Font(name="Arial Narrow", color="2C2C2C", size=10)
 TITLE_FONT = Font(name="Lato", bold=True, color=OLIVE, size=14)
 SUBTITLE_FONT = Font(name="Lato", color=WARM_GRAY, size=11)
-BLANK_FONT = Font(name="Arial Narrow", color="999999", size=10, italic=True)
 
 # Fills
 HEADER_FILL = PatternFill(start_color=OLIVE, end_color=OLIVE, fill_type="solid")
 ALT_ROW_FILL = PatternFill(start_color=SAGE, end_color=SAGE, fill_type="solid")
 WHITE_FILL = PatternFill(start_color=WHITE, end_color=WHITE, fill_type="solid")
-EDITABLE_FILL = PatternFill(start_color=LIGHT_YELLOW, end_color=LIGHT_YELLOW, fill_type="solid")
 
 # Borders
 THIN_BORDER = Border(
@@ -85,65 +81,6 @@ def _write_data_rows(ws, start_row: int, rows: list[dict], columns: list[str]):
             cell.alignment = Alignment(vertical="center", wrap_text=True)
 
 
-def write_summary_sheet(wb: Workbook, schedules: dict, schedule_defs: list[dict],
-                        project_name: str, qc_issues: list[dict], mode: str = "template"):
-    """Write the Summary tab."""
-    ws = wb.active
-    ws.title = "Summary"
-
-    # Title
-    ws.cell(row=1, column=1, value="EBIF-CALC").font = Font(name="Lato", bold=True, color=OLIVE, size=20)
-    ws.cell(row=2, column=1, value="Ellis Building Intelligence Framework").font = SUBTITLE_FONT
-    ws.cell(row=3, column=1, value=project_name).font = Font(name="Arial Narrow", color=WARM_GRAY, size=11)
-
-    mode_label = "Working Document (Step 1 — fill in spec data)" if mode == "template" else "Published Report (Step 2)"
-    ws.cell(row=4, column=1, value=mode_label).font = Font(
-        name="Arial Narrow", color=OLIVE, size=10, bold=True, italic=True)
-    ws.cell(row=5, column=1, value=f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}").font = Font(
-        name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
-
-    # Schedule summary table
-    row = 7
-    if mode == "template":
-        headers = ["#", "Schedule", "Elements", "Fields Populated", "Fields Blank"]
-    else:
-        headers = ["#", "Schedule", "Elements", "Warnings", "Complete"]
-    _write_header_row(ws, row, headers)
-
-    row = 8
-    total_elements = 0
-    for idx, sdef in enumerate(schedule_defs, start=1):
-        sid = sdef["id"]
-        sched_rows = schedules.get(sid, [])
-        count = len(sched_rows)
-        total_elements += count
-
-        if mode == "template":
-            populated, blank = _count_fill_status(sched_rows, sdef.get("columns", []))
-            vals = [idx, sdef["name"], count, populated, blank]
-        else:
-            warnings = sum(1 for q in qc_issues if q["schedule"] == sdef["name"] and q["severity"] == "Warning")
-            complete = count - warnings if count > 0 else 0
-            vals = [idx, sdef["name"], count, warnings, complete]
-
-        fill = ALT_ROW_FILL if idx % 2 == 0 else WHITE_FILL
-        for col_idx, val in enumerate(vals, start=1):
-            cell = ws.cell(row=row, column=col_idx, value=val)
-            cell.font = BODY_FONT
-            cell.fill = fill
-            cell.border = THIN_BORDER
-        row += 1
-
-    # Totals row
-    for col_idx, val in enumerate(["", "TOTAL", total_elements, "", ""], start=1):
-        cell = ws.cell(row=row, column=col_idx, value=val)
-        cell.font = Font(name="Lato", bold=True, color=OLIVE, size=10)
-        cell.border = THIN_BORDER
-
-    _auto_width(ws)
-    logger.info("Summary tab: %d schedules, %d total elements", len(schedule_defs), total_elements)
-
-
 def _count_fill_status(rows: list[dict], columns: list[str]) -> tuple[int, int]:
     """Count populated vs blank fields across all rows and columns."""
     populated = 0
@@ -161,32 +98,145 @@ def _count_fill_status(rows: list[dict], columns: list[str]) -> tuple[int, int]:
     return populated, blank
 
 
-def write_schedule_sheet(wb: Workbook, schedule_def: dict, rows: list[dict]):
-    """Write a single schedule tab with all columns."""
-    sname = schedule_def["name"]
-    tab_name = sname[:31]
-    ws = wb.create_sheet(title=tab_name)
+def _schedule_filename(schedule_name: str) -> str:
+    """Convert schedule name to a clean filename."""
+    return f"{schedule_name}.xlsx"
 
-    # Columns: Element ID + all schedule columns + Qty
+
+# ------------------------------------------------------------------
+# Individual schedule file
+# ------------------------------------------------------------------
+
+def write_schedule_file(
+    schedule_def: dict,
+    rows: list[dict],
+    output_dir: Path,
+    project_name: str,
+) -> Path:
+    """Write a single schedule to its own Excel file.
+
+    Returns the path to the written file.
+    """
+    sname = schedule_def["name"]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sname[:31]
+
+    # Title row
+    ws.cell(row=1, column=1, value=sname).font = TITLE_FONT
+    ws.cell(row=2, column=1, value=project_name).font = Font(name="Arial Narrow", color=WARM_GRAY, size=10)
+    ws.cell(row=3, column=1, value=f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}").font = Font(
+        name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
+
+    # Data table starts at row 5
     columns = ["Element ID"] + schedule_def.get("columns", []) + ["Qty"]
-    _write_header_row(ws, 1, columns)
-    _write_data_rows(ws, 2, rows, columns)
+    _write_header_row(ws, 5, columns)
+    _write_data_rows(ws, 6, rows, columns)
     _auto_width(ws)
 
-    # Freeze top row
-    ws.freeze_panes = "A2"
+    # Freeze header row
+    ws.freeze_panes = "A6"
 
-    # Enable auto-filter for easy sorting/filtering
+    # Auto-filter
     if rows:
         last_col = get_column_letter(len(columns))
-        ws.auto_filter.ref = f"A1:{last_col}{len(rows) + 1}"
+        ws.auto_filter.ref = f"A5:{last_col}{len(rows) + 5}"
 
-    logger.info("Schedule tab '%s': %d rows, %d columns", tab_name, len(rows), len(columns))
+    # Save
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filename = _schedule_filename(sname)
+    filepath = output_dir / filename
+    wb.save(str(filepath))
+    logger.info("Schedule file: %s (%d rows)", filename, len(rows))
+    return filepath
 
 
-def write_qc_sheet(wb: Workbook, qc_issues: list[dict]):
-    """Write the QC / Audit tab."""
-    ws = wb.create_sheet(title="QC Audit")
+# ------------------------------------------------------------------
+# Summary file
+# ------------------------------------------------------------------
+
+def write_summary_file(
+    schedules: dict[str, list[dict]],
+    schedule_defs: list[dict],
+    project_name: str,
+    output_dir: Path,
+    qc_issues: list[dict] | None = None,
+    mode: str = "template",
+) -> Path:
+    """Write the Summary.xlsx overview file."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Summary"
+
+    ws.cell(row=1, column=1, value="EBIF-CALC").font = Font(name="Lato", bold=True, color=OLIVE, size=20)
+    ws.cell(row=2, column=1, value="Ellis Building Intelligence Framework").font = SUBTITLE_FONT
+    ws.cell(row=3, column=1, value=project_name).font = Font(name="Arial Narrow", color=WARM_GRAY, size=11)
+
+    mode_label = "Working Document (Step 1 -- fill in spec data)" if mode == "template" else "Published Report (Step 2)"
+    ws.cell(row=4, column=1, value=mode_label).font = Font(
+        name="Arial Narrow", color=OLIVE, size=10, bold=True, italic=True)
+    ws.cell(row=5, column=1, value=f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}").font = Font(
+        name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
+
+    # Table
+    row = 7
+    if mode == "template":
+        headers = ["#", "Schedule", "File", "Elements", "Fields Populated", "Fields Blank"]
+    else:
+        headers = ["#", "Schedule", "File", "Elements", "Warnings", "Complete"]
+    _write_header_row(ws, row, headers)
+
+    row = 8
+    total_elements = 0
+    for idx, sdef in enumerate(schedule_defs, start=1):
+        sid = sdef["id"]
+        sched_rows = schedules.get(sid, [])
+        count = len(sched_rows)
+        total_elements += count
+        filename = _schedule_filename(sdef["name"]) if count > 0 else "--"
+
+        if mode == "template":
+            pop, blank = _count_fill_status(sched_rows, sdef.get("columns", []))
+            vals = [idx, sdef["name"], filename, count, pop, blank]
+        else:
+            warnings = sum(1 for q in (qc_issues or []) if q["schedule"] == sdef["name"] and q["severity"] == "Warning")
+            complete = count - warnings if count > 0 else 0
+            vals = [idx, sdef["name"], filename, count, warnings, complete]
+
+        fill = ALT_ROW_FILL if idx % 2 == 0 else WHITE_FILL
+        for col_idx, val in enumerate(vals, start=1):
+            cell = ws.cell(row=row, column=col_idx, value=val)
+            cell.font = BODY_FONT
+            cell.fill = fill
+            cell.border = THIN_BORDER
+        row += 1
+
+    for col_idx, val in enumerate(["", "TOTAL", "", total_elements, "", ""], start=1):
+        cell = ws.cell(row=row, column=col_idx, value=val)
+        cell.font = Font(name="Lato", bold=True, color=OLIVE, size=10)
+        cell.border = THIN_BORDER
+
+    _auto_width(ws)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filepath = output_dir / "Summary.xlsx"
+    wb.save(str(filepath))
+    logger.info("Summary file: Summary.xlsx (%d schedules, %d elements)", len(schedule_defs), total_elements)
+    return filepath
+
+
+# ------------------------------------------------------------------
+# QC Audit file
+# ------------------------------------------------------------------
+
+def write_qc_file(
+    qc_issues: list[dict],
+    output_dir: Path,
+) -> Path:
+    """Write the QC Audit.xlsx file."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "QC Audit"
 
     columns = ["Schedule", "Element ID", "Severity", "Message"]
     _write_header_row(ws, 1, columns)
@@ -202,41 +252,49 @@ def write_qc_sheet(wb: Workbook, qc_issues: list[dict]):
 
     _auto_width(ws)
     ws.freeze_panes = "A2"
-    logger.info("QC tab: %d issues", len(qc_issues))
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filepath = output_dir / "QC Audit.xlsx"
+    wb.save(str(filepath))
+    logger.info("QC file: QC Audit.xlsx (%d issues)", len(qc_issues))
+    return filepath
+
+
+# ------------------------------------------------------------------
+# Step 1: Write all template files
+# ------------------------------------------------------------------
 
 def write_template(
     schedules: dict[str, list[dict]],
     schedule_defs: list[dict],
     project_name: str,
     output_dir: Path,
-    project_slug: str,
-) -> Path:
-    """Generate the Step 1 Excel template (working document).
+) -> list[Path]:
+    """Generate Step 1 individual Excel files (working documents).
 
-    Uses a stable filename so the user can edit and re-save.
-    Returns the path to the written file.
+    Returns list of paths written.
     """
-    wb = Workbook()
+    paths = []
 
-    # Summary (template mode)
-    write_summary_sheet(wb, schedules, schedule_defs, project_name, [], mode="template")
+    # Summary
+    summary_path = write_summary_file(schedules, schedule_defs, project_name, output_dir, mode="template")
+    paths.append(summary_path)
 
-    # One tab per active schedule
+    # Individual schedule files
     for sdef in schedule_defs:
         sid = sdef["id"]
         rows = schedules.get(sid, [])
         if rows:
-            write_schedule_sheet(wb, sdef, rows)
+            p = write_schedule_file(sdef, rows, output_dir, project_name)
+            paths.append(p)
 
-    # Save with stable filename
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"ebif_schedule_{project_slug}.xlsx"
-    filepath = output_dir / filename
-    wb.save(str(filepath))
-    logger.info("Excel template: %s", filepath)
-    return filepath
+    logger.info("Step 1: wrote %d files to %s", len(paths), output_dir)
+    return paths
 
+
+# ------------------------------------------------------------------
+# Step 2: Write all published files
+# ------------------------------------------------------------------
 
 def write_published(
     schedules: dict[str, list[dict]],
@@ -244,33 +302,30 @@ def write_published(
     qc_issues: list[dict],
     project_name: str,
     output_dir: Path,
-    project_slug: str,
-) -> Path:
-    """Generate the Step 2 published Excel with QC tab.
+) -> list[Path]:
+    """Generate Step 2 published Excel files with QC.
 
-    Returns the path to the written file.
+    Returns list of paths written.
     """
-    wb = Workbook()
+    paths = []
 
     # Summary (publish mode)
-    write_summary_sheet(wb, schedules, schedule_defs, project_name, qc_issues, mode="publish")
+    summary_path = write_summary_file(schedules, schedule_defs, project_name, output_dir,
+                                       qc_issues=qc_issues, mode="publish")
+    paths.append(summary_path)
 
-    # Schedule tabs
+    # Individual schedule files (overwrite with latest data)
     for sdef in schedule_defs:
         sid = sdef["id"]
         rows = schedules.get(sid, [])
         if rows:
-            write_schedule_sheet(wb, sdef, rows)
+            p = write_schedule_file(sdef, rows, output_dir, project_name)
+            paths.append(p)
 
-    # QC tab
+    # QC file
     if qc_issues:
-        write_qc_sheet(wb, qc_issues)
+        qc_path = write_qc_file(qc_issues, output_dir)
+        paths.append(qc_path)
 
-    # Save with timestamp for versioning
-    output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-    filename = f"ebif_published_{project_slug}_{timestamp}.xlsx"
-    filepath = output_dir / filename
-    wb.save(str(filepath))
-    logger.info("Published Excel: %s", filepath)
-    return filepath
+    logger.info("Step 2: wrote %d files to %s", len(paths), output_dir)
+    return paths

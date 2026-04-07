@@ -1,4 +1,4 @@
-"""Tests for excel_writer — generates workbook from mock data."""
+"""Tests for excel_writer — generates individual files from mock data."""
 
 import json
 import tempfile
@@ -20,34 +20,52 @@ def load_schedule_defs():
         return json.load(f)["schedules"]
 
 
-def test_write_template():
+def test_write_template_creates_individual_files():
     from ebif.output.excel_writer import write_template
 
     data = load_mock()
     defs = load_schedule_defs()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = write_template(
+        paths = write_template(
             schedules=data["schedules"],
             schedule_defs=defs,
             project_name="Test Project",
             output_dir=Path(tmpdir),
-            project_slug="test-project",
         )
-        assert path.exists()
-        assert path.suffix == ".xlsx"
-        assert path.stat().st_size > 0
-        assert "test-project" in path.name
+        # Should have Summary + individual schedule files
+        assert len(paths) >= 2
+        names = [p.name for p in paths]
+        assert "Summary.xlsx" in names
+        # Should have at least one schedule file
+        assert any(n.endswith(".xlsx") and n != "Summary.xlsx" for n in names)
 
 
-def test_write_published():
+def test_write_template_creates_appliances_file():
+    from ebif.output.excel_writer import write_template
+
+    data = load_mock()
+    defs = load_schedule_defs()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        paths = write_template(
+            schedules=data["schedules"],
+            schedule_defs=defs,
+            project_name="Test Project",
+            output_dir=Path(tmpdir),
+        )
+        names = [p.name for p in paths]
+        assert "Appliances.xlsx" in names
+
+
+def test_write_published_creates_qc_file():
     from ebif.output.excel_writer import write_published
 
     data = load_mock()
     defs = load_schedule_defs()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = write_published(
+        paths = write_published(
             schedules=data["schedules"],
             schedule_defs=defs,
             qc_issues=[{"schedule": "Furniture", "element_id": "OBJ-011",
@@ -55,50 +73,28 @@ def test_write_published():
                          "message": "Missing TEAR SHEET #"}],
             project_name="Test Project",
             output_dir=Path(tmpdir),
-            project_slug="test-project",
         )
-        assert path.exists()
-        assert "published" in path.name
+        names = [p.name for p in paths]
+        assert "QC Audit.xlsx" in names
 
 
-def test_template_has_schedule_tabs():
-    from openpyxl import load_workbook
+def test_roundtrip_individual_files():
+    """Write per-schedule files, read them back, verify data integrity."""
     from ebif.output.excel_writer import write_template
+    from ebif.excel_reader import read_all_schedules
 
     data = load_mock()
     defs = load_schedule_defs()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = write_template(
+        write_template(
             schedules=data["schedules"],
             schedule_defs=defs,
             project_name="Test Project",
             output_dir=Path(tmpdir),
-            project_slug="test-project",
         )
-        wb = load_workbook(str(path))
-        assert "Summary" in wb.sheetnames
-        assert len(wb.sheetnames) >= 2
-
-
-def test_roundtrip_excel():
-    """Write template, read it back, verify data integrity."""
-    from ebif.output.excel_writer import write_template
-    from ebif.excel_reader import read_workbook
-
-    data = load_mock()
-    defs = load_schedule_defs()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = write_template(
-            schedules=data["schedules"],
-            schedule_defs=defs,
-            project_name="Test Project",
-            output_dir=Path(tmpdir),
-            project_slug="test-project",
-        )
-        # Read it back
-        result = read_workbook(path, defs)
-        # Check furniture came back
+        # Read back
+        result = read_all_schedules(Path(tmpdir), defs)
+        # Furniture should roundtrip
         assert "furniture" in result
         assert len(result["furniture"]) == len(data["schedules"]["furniture"])
