@@ -211,24 +211,26 @@ function Dashboard() {
           {project.client_name && <p className="text-warm-gray">{project.client_name}</p>}
           {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
         </div>
-        <div className="flex items-center gap-3">
-          {syncing && syncStatus && (
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-3">
+            {syncing && syncStatus && (
+              <button
+                onClick={cancelRetry}
+                className="text-warm-gray font-heading font-bold px-4 py-3 rounded-lg hover:text-red-600 transition text-sm"
+              >
+                Cancel
+              </button>
+            )}
             <button
-              onClick={cancelRetry}
-              className="text-warm-gray font-heading font-bold px-4 py-3 rounded-lg hover:text-red-600 transition text-sm"
+              onClick={handleRefreshClick}
+              disabled={syncing || writing}
+              className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
             >
-              Cancel
+              {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
             </button>
-          )}
-          <button
-            onClick={handleRefreshClick}
-            disabled={syncing || writing}
-            className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
-          >
-            {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
-          </button>
-          <p className="text-xs text-warm-gray mt-2 text-right">
-            Updates the Excel schedule from the live Archicad model.<br />
+          </div>
+          <p className="text-xs text-warm-gray mt-2 text-center max-w-[260px]">
+            Updates the Excel schedule from the live Archicad model.
             The project must be open in Archicad with the Tapir palette running.
           </p>
         </div>
