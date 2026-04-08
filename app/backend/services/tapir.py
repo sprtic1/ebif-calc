@@ -40,7 +40,7 @@ def _load_schedule_defs():
     return data.get('schedules', [])
 
 
-PORT_RANGE = range(19724, 19735)  # 19724–19734 inclusive
+PORT_RANGE = range(19720, 19735)  # 19720–19734 inclusive
 
 
 def get_port():
@@ -93,7 +93,7 @@ def scan_instances():
             return None
 
     instances = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as pool:
         futures = {pool.submit(_probe, p): p for p in PORT_RANGE}
         for f in concurrent.futures.as_completed(futures):
             result = f.result()
