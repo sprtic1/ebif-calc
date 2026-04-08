@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 const SCHEDULE_LABELS = {
@@ -36,6 +36,12 @@ function Dashboard() {
   const [writing, setWriting] = useState(false)
   const [writeProgress, setWriteProgress] = useState(null)
   const [retryTimer, setRetryTimer] = useState(null)
+  const [btnWidth, setBtnWidth] = useState(0)
+  const btnRef = useRef(null)
+
+  useEffect(() => {
+    if (btnRef.current) setBtnWidth(btnRef.current.offsetWidth)
+  })
 
   const fetchProject = () => {
     setLoading(true)
@@ -222,6 +228,7 @@ function Dashboard() {
               </button>
             )}
             <button
+              ref={btnRef}
               onClick={handleRefreshClick}
               disabled={syncing || writing}
               className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
@@ -229,7 +236,10 @@ function Dashboard() {
               {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
             </button>
           </div>
-          <p className="text-xs text-warm-gray mt-2 text-center max-w-[260px]">
+          <p
+            className="text-xs text-warm-gray mt-2 text-center"
+            style={btnWidth ? { maxWidth: btnWidth } : undefined}
+          >
             Updates the Excel schedule from the live Archicad model.
             The project must be open in Archicad with the Tapir palette running.
           </p>
