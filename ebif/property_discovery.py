@@ -243,13 +243,17 @@ def _resolve_column_defs(
                 resolved[label] = resolve_builtin(nonloc)
             elif source.startswith("user:"):
                 prop_name = source[len("user:"):]
-                # Look in schedule's EBIF group first, then GENERAL PROPERTIES, then flat
                 guid = sched_group_props.get(prop_name, "")
                 if not guid:
                     guid = general_props.get(prop_name, "")
                 if not guid:
                     guid = user_flat.get(prop_name, "")
                 resolved[label] = guid
+            elif source.startswith("classification:"):
+                # Classification columns are resolved at extraction time, not here
+                resolved[label] = f"_classification:{source[len('classification:'):]}"
+            elif source.startswith("literal:"):
+                resolved[label] = f"_literal:{source[len('literal:'):]}"
             else:
                 resolved[label] = ""
 

@@ -91,41 +91,169 @@ def extract_schedule(
     resolved_guids = schedule_def.get("_resolved_col_guids", {})
     ebif_uid_guid = schedule_def.get("_ebif_uid_guid", "")
 
-    # Collect GUIDs to fetch: EBIF UID + all column GUIDs
+    # Separate columns by type: properties vs classifications vs literals
     prop_guids = []
     prop_labels = []
+    classification_cols = {}  # label -> system name
+    literal_cols = {}  # label -> literal value
+
     if ebif_uid_guid:
         prop_guids.append(ebif_uid_guid)
         prop_labels.append("EBIF UID")
-    for col in col_defs:
-        guid = resolved_guids.get(col["label"], "")
-        if guid:
-            prop_guids.append(guid)
-            prop_labels.append(col["label"])
 
-    # Fetch all properties for included elements
+    for col in col_defs:
+        label = col["label"]
+        resolved = resolved_guids.get(label, "")
+        if resolved.startswith("_classification:"):
+            classification_cols[label] = resolved[len("_classification:"):]
+        elif resolved.startswith("_literal:"):
+            literal_cols[label] = resolved[len("_literal:"):]
+        elif resolved:
+            prop_guids.append(resolved)
+            prop_labels.append(label)
+
+    # Fetch property values for included elements
     rows = conn.fetch_element_properties(included, prop_guids)
+
+    # Fetch classification data if needed
+    cls_data = {}
+    if classification_cols:
+        cls_data = _fetch_classifications(conn, included, classification_cols)
 
     # Map GUID keys back to readable column names
     result = []
-    for row in rows:
+    for i, row in enumerate(rows):
         ebif_uid = row.get(ebif_uid_guid, "") if ebif_uid_guid else ""
+        elem_guid = row["_guid"]
         entry = {
-            "_guid": row["_guid"],
+            "_guid": elem_guid,
             "_type": row.get("_type", ""),
-            "EBIF UID": ebif_uid if ebif_uid else row["_guid"],
+            "EBIF UID": ebif_uid if ebif_uid else elem_guid,
         }
         for label, guid in zip(prop_labels, prop_guids):
             if label == "EBIF UID":
                 continue
             val = row.get(guid, "")
             entry[label] = val if val is not None else ""
+        # Add classification columns
+        for label in classification_cols:
+            entry[label] = cls_data.get(elem_guid, {}).get(label, "")
+        # Add literal columns
+        for label, val in literal_cols.items():
+            entry[label] = val
         # Qty defaults to 1 per element
         entry["Qty"] = 1
         result.append(entry)
 
     logger.info("Schedule '%s': %d elements included", sched_name, len(result))
     return result
+
+
+def _fetch_classifications(
+    conn: ArchicadConnection,
+    elements: list[dict],
+    classification_cols: dict[str, str],
+) -> dict[str, dict[str, str]]:
+    """Fetch classification values for elements.
+
+    Args:
+        conn: Archicad connection
+        elements: list of element dicts with elementId
+        classification_cols: mapping of label -> classification system name
+
+    Returns:
+        dict mapping element_guid -> {label: "classification id - name"}
+    """
+    import requests, os
+    port = int(os.getenv("_EBIF_AC_PORT", "19724"))
+    base = f"http://localhost:{port}"
+
+    def ac(cmd, params=None):
+        payload = {"command": cmd}
+        if params: payload["parameters"] = params
+        return requests.post(base, json=payload, timeout=30).json()
+
+    # Get all classification systems
+    sys_r = ac("API.GetAllClassificationSystems")
+    if not sys_r.get("succeeded"):
+        return {}
+    systems = sys_r["result"]["classificationSystems"]
+
+    # Map system names to GUIDs
+    sys_name_to_guid = {}
+    sys_guid_to_name = {}
+    for s in systems:
+        sys_name_to_guid[s["name"]] = s["classificationSystemId"]["guid"]
+        sys_guid_to_name[s["classificationSystemId"]["guid"]] = s["name"]
+
+    # Figure out which systems we need
+    needed_sys_guids = []
+    label_to_sys_name = {}
+    for label, sys_name in classification_cols.items():
+        guid = sys_name_to_guid.get(sys_name, "")
+        if guid:
+            needed_sys_guids.append(guid)
+            label_to_sys_name[label] = sys_name
+
+    if not needed_sys_guids:
+        return {}
+
+    # Fetch classifications for all elements at once
+    clean_elems = [{"elementId": e["elementId"]} for e in elements]
+    sys_ids = [{"classificationSystemId": {"guid": g}} for g in needed_sys_guids]
+    cr = ac("API.GetClassificationsOfElements", {"elements": clean_elems, "classificationSystemIds": sys_ids})
+    if not cr.get("succeeded"):
+        return {}
+
+    # Get all classification items we need to resolve
+    item_guids_to_resolve = set()
+    for ec in cr["result"]["elementClassifications"]:
+        for ci in ec.get("classificationIds", []):
+            item_id = ci.get("classificationId", {}).get("classificationItemId", {}).get("guid")
+            if item_id:
+                item_guids_to_resolve.add(item_id)
+
+    # Resolve classification items to get their id + name
+    # Build item lookup by fetching all classifications from needed systems
+    item_lookup = {}  # item_guid -> "id - name"
+    for sys_guid in set(needed_sys_guids):
+        tree_r = ac("API.GetAllClassificationsInSystem", {"classificationSystemId": {"guid": sys_guid}})
+        if tree_r.get("succeeded"):
+            _walk_classification_tree(tree_r["result"].get("classificationItems", []), item_lookup)
+
+    # Build result: element_guid -> {label: value}
+    result = {}
+    for i, elem in enumerate(elements):
+        elem_guid = elem["elementId"]["guid"]
+        result[elem_guid] = {}
+        ec = cr["result"]["elementClassifications"][i]
+        # Map system GUIDs back to classification values
+        sys_guid_to_value = {}
+        for ci in ec.get("classificationIds", []):
+            sys_g = ci.get("classificationId", {}).get("classificationSystemId", {}).get("guid", "")
+            item_g = ci.get("classificationId", {}).get("classificationItemId", {}).get("guid", "")
+            if sys_g and item_g:
+                sys_guid_to_value[sys_g] = item_lookup.get(item_g, "")
+
+        for label, sys_name in label_to_sys_name.items():
+            sys_g = sys_name_to_guid.get(sys_name, "")
+            result[elem_guid][label] = sys_guid_to_value.get(sys_g, "")
+
+    logger.info("Fetched classifications for %d elements across %d systems", len(elements), len(needed_sys_guids))
+    return result
+
+
+def _walk_classification_tree(items: list, lookup: dict):
+    """Walk a classification tree and build item_guid -> 'id - name' lookup."""
+    for item in items:
+        ci = item.get("classificationItem", item)
+        guid = ci.get("classificationItemId", {}).get("guid", "")
+        cid = ci.get("id", "")
+        cname = ci.get("name", "")
+        if guid:
+            lookup[guid] = f"{cid} - {cname}" if cid else cname
+        for child in ci.get("children", item.get("children", [])):
+            _walk_classification_tree([child], lookup)
 
 
 def extract_all_schedules(
