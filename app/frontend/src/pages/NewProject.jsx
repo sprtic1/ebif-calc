@@ -46,7 +46,7 @@ export default function NewProject() {
     setSubmitting(true)
 
     try {
-      const res = await fetch('/project-hub/api/projects', {
+      const res = await fetch('/project-manager/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

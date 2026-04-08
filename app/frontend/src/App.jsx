@@ -7,8 +7,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-eid-light-sage">
       <header className="bg-eid-olive text-white px-6 py-4 shadow-md flex items-center gap-4">
-        <a href="/project-hub/" className="flex items-center gap-3">
-          <img src="/project-hub/eid-logo.png" alt="Ellis Interior Design" className="h-10 w-auto" />
+        <a href="/project-manager/" className="flex items-center gap-3">
+          <img src="/project-manager/eid-logo.png" alt="Ellis Interior Design" className="h-10 w-auto" />
           <span className="text-2xl font-heading font-bold tracking-wide">Project Manager</span>
         </a>
       </header>

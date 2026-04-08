@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/project-hub/api/projects/${id}`)
+    fetch(`/project-manager/api/projects/${id}`)
       .then(r => r.json())
       .then(data => { setProject(data); setLoading(false) })
       .catch(() => setLoading(false))

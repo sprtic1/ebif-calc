@@ -6,7 +6,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/project-hub/api/projects')
+    fetch('/project-manager/api/projects')
       .then(r => r.json())
       .then(data => { setProjects(data); setLoading(false) })
       .catch(() => setLoading(false))
