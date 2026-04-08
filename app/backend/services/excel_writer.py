@@ -10,11 +10,14 @@ Columns A–D contain formulas that reference the Archicad data:
   C =P{row}  (Tear Sheet #)
   D =Q{row}  (Location)
 
-Columns E–K are MANUAL (never touched). Exception: Decorative Lighting E–M.
+Columns E–K are MANUAL (never touched). L–M are empty (never touched).
 Table of Contents tab is never modified.
 
 Row 4 = header row. Data starts at row 5.
-On refresh, clears column N onward + A–D formulas from row 5 down.
+On refresh, clears A–D and N onward from row 5 down. Also clears any
+stray data in L–M from previous buggy writes.
+
+Excel Table objects are removed before writing to prevent repair errors.
 
 Uses openpyxl with keep_vba=True to preserve macros.
 """
@@ -48,10 +51,10 @@ THIN_BORDER = Border(
 HEADER_ROW = 4
 DATA_START = 5
 
-# Archicad data starts at column N (14)
+# Archicad data starts at column N (14) — NOTHING before this
 AC_START = 14  # column N
 
-# Core 4 Archicad fields written at N, O, P, Q
+# Core 4 Archicad fields written at N(14), O(15), P(16), Q(17)
 CORE_FIELDS = [
     ("EBIF UID", "EBIF UID"),
     ("QTY", "Qty"),
@@ -65,9 +68,6 @@ FORMULA_SRC_COLS = [14, 15, 16, 17]  # N, O, P, Q
 
 # Tabs to skip
 SKIP_TABS = {"Table of Contents"}
-
-# Schedule ID for Decorative Lighting (manual cols E–M instead of E–K)
-LIGHTING_ID = "decorative_lighting"
 
 
 def write_to_master(
@@ -121,6 +121,9 @@ def write_to_master(
             result[sid] = 0
             continue
 
+        # Remove Excel Table objects to prevent repair errors
+        _remove_tables(ws)
+
         # Build list of extra reference labels beyond the core 4
         archicad_labels = sdef.get('_archicad_col_labels', [])
         core_keys = {f[1] for f in CORE_FIELDS}
@@ -129,7 +132,7 @@ def write_to_master(
         # Total Archicad columns: 4 core + N reference
         total_ac_cols = 4 + len(ref_labels)
 
-        # Clear old data: columns A–D and N onward from row 5 down
+        # Clear old data: A–D, L–M (stray), and N onward from row 5 down
         _clear_data(ws, total_ac_cols)
 
         # Write Archicad data headers at row 4, starting at column N
@@ -146,13 +149,13 @@ def write_to_master(
         for i, row_data in enumerate(rows):
             row_num = DATA_START + i
 
-            # Core 4 fields at N, O, P, Q
+            # Core 4 fields at N(14), O(15), P(16), Q(17)
             _write_cell(ws, row_num, AC_START + 0, row_data.get('EBIF UID', ''), i)
             _write_cell(ws, row_num, AC_START + 1, row_data.get('Qty', 1), i)
             _write_cell(ws, row_num, AC_START + 2, row_data.get('TEAR SHEET #', ''), i)
             _write_cell(ws, row_num, AC_START + 3, row_data.get('Location', ''), i)
 
-            # Extra reference columns at R, S, T, ...
+            # Extra reference columns at R(18), S(19), T(20), ...
             for j, lbl in enumerate(ref_labels):
                 col = AC_START + 4 + j
                 _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
@@ -172,6 +175,20 @@ def write_to_master(
     wb.save(xlsm_path)
     logger.info("Saved EBIF Master Template: %s", xlsm_path)
     return result
+
+
+def _remove_tables(ws):
+    """Remove all Excel Table objects from a worksheet.
+
+    Excel Tables (ListObjects) cause repair errors when openpyxl writes
+    data into cells that overlap with a table's range. Removing them
+    preserves the cell data but eliminates the structured table definition.
+    """
+    if hasattr(ws, '_tables') and ws._tables:
+        table_names = [t.name for t in ws._tables]
+        ws._tables = []
+        logger.info("Removed %d Excel Table(s) from '%s': %s",
+                     len(table_names), ws.title, ', '.join(table_names))
 
 
 def _find_sheet(wb, schedule_name):
@@ -217,22 +234,26 @@ def _clear_data(ws, total_ac_cols):
     """Clear old Archicad data from row 5 downward.
 
     Clears:
-      - Columns A–D (formulas)
-      - Column N onward (Archicad data)
-    NEVER touches columns E–M (manual columns).
+      - Columns A–D (1–4) — old formulas
+      - Columns L–M (12–13) — stray data from previous buggy writes
+      - Column N (14) onward — old Archicad data
+    NEVER touches columns E–K (5–11) — manual columns.
     """
     max_row = ws.max_row or DATA_START
     if max_row < DATA_START:
         return
 
-    # Determine the furthest Archicad column we need to clear
+    # Determine the furthest column to clear
     max_ac_col = AC_START + total_ac_cols
-    # Also clear anything beyond that from previous writes
     furthest = max(max_ac_col, ws.max_column + 1) if ws.max_column else max_ac_col
 
     for row_num in range(DATA_START, max_row + 1):
         # Clear A–D (formula columns)
         for col in range(1, 5):
+            ws.cell(row=row_num, column=col).value = None
+
+        # Clear L–M (12–13) — fix stray data from previous writes
+        for col in range(12, 14):
             ws.cell(row=row_num, column=col).value = None
 
         # Clear N onward (Archicad data columns)

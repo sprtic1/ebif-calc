@@ -292,17 +292,17 @@ function Dashboard() {
       {/* Preview modal overlay */}
       {preview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4">
             <h3 className="font-heading text-xl font-bold text-olive mb-4">
               Archicad Preview — {preview.total} elements found
             </h3>
-            <div className="space-y-2 mb-6">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-6">
               {Object.entries(SCHEDULE_LABELS).map(([key, label]) => {
                 const count = preview.counts?.[key] || 0
                 return (
                   <div key={key} className="flex justify-between items-center py-1 border-b border-gray-100">
-                    <span className="text-warm-gray font-heading">{label}</span>
-                    <span className={`font-heading font-bold ${count > 0 ? 'text-olive' : 'text-gray-300'}`}>
+                    <span className="text-warm-gray font-heading text-sm">{label}</span>
+                    <span className={`font-heading font-bold text-sm ${count > 0 ? 'text-olive' : 'text-gray-300'}`}>
                       {count}
                     </span>
                   </div>
