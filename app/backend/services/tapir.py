@@ -14,7 +14,7 @@ import signal
 logger = logging.getLogger(__name__)
 
 TAPIR_TIMEOUT = 60  # seconds — applies to connect, preview, and refresh
-TAPIR_ERROR_MSG = "I'm having trouble connecting to the project — please make sure the Tapir palette is open in your running Archicad session!"
+TAPIR_ERROR_MSG = "Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!"
 
 # Add project root to sys.path so we can import ebif/ modules
 _PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))

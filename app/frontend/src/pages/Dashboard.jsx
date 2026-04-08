@@ -121,7 +121,7 @@ function Dashboard() {
       setPreview(data)
       setSyncing(false)
     } catch {
-      setSyncError("I'm having trouble connecting to the project \u2014 please make sure the Tapir palette is open in your running Archicad session!")
+      setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
       setSyncing(false)
     }
   }
@@ -149,7 +149,7 @@ function Dashboard() {
         setSyncError(`Data synced but Excel write failed: ${data.excel_error}`)
       }
     } catch {
-      setSyncError("I'm having trouble connecting to the project \u2014 please make sure the Tapir palette is open in your running Archicad session!")
+      setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
       setWriting(false)
     }
   }
