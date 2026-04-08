@@ -125,6 +125,7 @@ function Dashboard() {
         setSyncing(false)
         return
       }
+      setSyncError('')
       setPreview(data)
       setSyncing(false)
     } catch {
