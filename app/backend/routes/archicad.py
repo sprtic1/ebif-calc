@@ -1,8 +1,8 @@
-"""Archicad sync routes — preview counts and full refresh via Tapir API."""
+"""Archicad sync routes — instance discovery, preview counts, and full refresh."""
 
 from datetime import datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 archicad_bp = Blueprint('archicad', __name__)
 
@@ -11,6 +11,24 @@ def _get_helpers():
     """Import app-level helpers lazily to avoid circular imports."""
     from app import load_projects, save_projects
     return load_projects, save_projects
+
+
+@archicad_bp.route('/api/archicad/instances', methods=['GET'])
+def list_instances():
+    """Scan ports 19724-19734 for running Archicad instances."""
+    try:
+        from services.tapir import scan_instances
+        instances = scan_instances()
+    except Exception as e:
+        return jsonify({'error': f'Scan failed: {e}'}), 500
+
+    if not instances:
+        return jsonify({
+            'instances': [],
+            'error': 'Cannot connect to Archicad \u2014 is it running with Tapir?',
+        })
+
+    return jsonify({'instances': instances})
 
 
 @archicad_bp.route('/api/projects/<project_id>/preview', methods=['GET'])
@@ -22,9 +40,11 @@ def preview_archicad(project_id):
     if not project:
         return jsonify({'error': 'Project not found'}), 404
 
+    port = request.args.get('port', type=int)
+
     try:
         from services.tapir import preview_counts
-        result = preview_counts()
+        result = preview_counts(port=port)
     except ConnectionError as e:
         return jsonify({'error': str(e)}), 503
     except Exception as e:
@@ -57,9 +77,12 @@ def refresh_archicad(project_id):
     if not folder:
         return jsonify({'error': 'Project has no folder location set'}), 400
 
+    data = request.get_json(silent=True) or {}
+    port = data.get('port') or request.args.get('port', type=int)
+
     try:
         from services.tapir import full_extract
-        result = full_extract()
+        result = full_extract(port=port)
     except ConnectionError as e:
         return jsonify({'error': str(e)}), 503
     except Exception as e:

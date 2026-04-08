@@ -36,10 +36,68 @@ def _load_schedule_defs():
     return data.get('schedules', [])
 
 
+PORT_RANGE = range(19724, 19735)  # 19724–19734 inclusive
+
+
 def get_port():
     """Return the Tapir port from settings.json."""
     settings = _load_settings()
     return settings.get('tapir_port', 19724)
+
+
+def scan_instances():
+    """Scan ports 19724-19734 for running Archicad instances.
+
+    Returns list of {port, project_name} for each responding instance.
+    """
+    import concurrent.futures
+    import requests as _requests
+
+    def _probe(port):
+        try:
+            url = f"http://localhost:{port}"
+            r = _requests.post(url, json={"command": "API.GetProductInfo"}, timeout=2)
+            data = r.json()
+            if not data.get("succeeded", True):
+                return None
+            # Get project name via Tapir
+            project_name = ""
+            try:
+                pr = _requests.post(url, json={
+                    "command": "API.ExecuteAddOnCommand",
+                    "parameters": {
+                        "addOnCommandId": {
+                            "commandNamespace": "TapirCommand",
+                            "commandName": "GetProjectInfo"
+                        },
+                        "addOnCommandParameters": {}
+                    }
+                }, timeout=5)
+                pd = pr.json()
+                resp = pd.get("result", {}).get("addOnCommandResponse", {})
+                project_name = resp.get("projectName", resp.get("projectPath", ""))
+                # Strip path, keep just filename without extension
+                if project_name and ("/" in project_name or "\\" in project_name):
+                    project_name = project_name.replace("\\", "/").split("/")[-1]
+                if project_name.endswith(".pln"):
+                    project_name = project_name[:-4]
+            except Exception:
+                project_name = f"Archicad (port {port})"
+            ver = data.get("result", {}).get("version", "?")
+            return {"port": port, "project_name": project_name or f"Archicad {ver}", "version": ver}
+        except Exception:
+            return None
+
+    instances = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as pool:
+        futures = {pool.submit(_probe, p): p for p in PORT_RANGE}
+        for f in concurrent.futures.as_completed(futures):
+            result = f.result()
+            if result:
+                instances.append(result)
+
+    instances.sort(key=lambda x: x["port"])
+    return instances
 
 
 def connect(port=None):

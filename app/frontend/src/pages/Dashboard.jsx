@@ -29,6 +29,8 @@ function Dashboard() {
   // Archicad sync state
   const [syncing, setSyncing] = useState(false)
   const [syncError, setSyncError] = useState('')
+  const [instances, setInstances] = useState(null)
+  const [selectedPort, setSelectedPort] = useState(null)
   const [preview, setPreview] = useState(null)
   const [writing, setWriting] = useState(false)
 
@@ -53,12 +55,47 @@ function Dashboard() {
     fetchProject()
   }, [id])
 
-  const handlePreview = async () => {
+  const handleRefreshClick = async () => {
     setSyncing(true)
     setSyncError('')
+    setInstances(null)
     setPreview(null)
+    setSelectedPort(null)
+
     try {
-      const res = await fetch(`/api/projects/${id}/preview`)
+      const res = await fetch('/api/archicad/instances')
+      const data = await res.json()
+
+      if (!data.instances || data.instances.length === 0) {
+        setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+        setSyncing(false)
+        return
+      }
+
+      if (data.instances.length === 1) {
+        // Only one instance — go straight to preview
+        await fetchPreview(data.instances[0].port)
+      } else {
+        // Multiple instances — show selector
+        setInstances(data.instances)
+        setSyncing(false)
+      }
+    } catch {
+      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+      setSyncing(false)
+    }
+  }
+
+  const handleInstanceSelect = async (port) => {
+    setInstances(null)
+    setSyncing(true)
+    await fetchPreview(port)
+  }
+
+  const fetchPreview = async (port) => {
+    setSelectedPort(port)
+    try {
+      const res = await fetch(`/api/projects/${id}/preview?port=${port}`)
       const data = await res.json()
       if (!res.ok) {
         setSyncError(data.error || 'Preview failed')
@@ -68,7 +105,7 @@ function Dashboard() {
       setPreview(data)
       setSyncing(false)
     } catch {
-      setSyncError('Cannot connect to Archicad — is it running with Tapir?')
+      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
       setSyncing(false)
     }
   }
@@ -77,7 +114,11 @@ function Dashboard() {
     setWriting(true)
     setSyncError('')
     try {
-      const res = await fetch(`/api/projects/${id}/refresh`, { method: 'POST' })
+      const res = await fetch(`/api/projects/${id}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: selectedPort }),
+      })
       const data = await res.json()
       if (!res.ok) {
         setSyncError(data.error || 'Refresh failed')
@@ -86,12 +127,13 @@ function Dashboard() {
       }
       setProject(data.project)
       setPreview(null)
+      setSelectedPort(null)
       setWriting(false)
       if (data.excel_error) {
         setSyncError(`Data synced but Excel write failed: ${data.excel_error}`)
       }
     } catch {
-      setSyncError('Cannot connect to Archicad — is it running with Tapir?')
+      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
       setWriting(false)
     }
   }
@@ -115,11 +157,11 @@ function Dashboard() {
           {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
         </div>
         <button
-          onClick={handlePreview}
+          onClick={handleRefreshClick}
           disabled={syncing || writing}
           className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
         >
-          {syncing ? 'Connecting...' : 'Refresh from Archicad'}
+          {syncing ? 'Scanning...' : 'Refresh from Archicad'}
         </button>
       </div>
 
@@ -128,6 +170,40 @@ function Dashboard() {
         <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
           {syncError}
           <button onClick={() => setSyncError('')} className="ml-4 text-red-500 font-bold">&times;</button>
+        </div>
+      )}
+
+      {/* Instance selector modal */}
+      {instances && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="font-heading text-xl font-bold text-olive mb-2">
+              Multiple Archicad Instances Found
+            </h3>
+            <p className="text-sm text-warm-gray mb-6">
+              Select which project to pull data from:
+            </p>
+            <div className="space-y-3 mb-6">
+              {instances.map((inst) => (
+                <button
+                  key={inst.port}
+                  onClick={() => handleInstanceSelect(inst.port)}
+                  className="w-full text-left bg-light-sage hover:bg-sage rounded-lg p-4 transition border border-sage"
+                >
+                  <p className="font-heading font-bold text-olive">{inst.project_name}</p>
+                  <p className="text-xs text-warm-gray mt-1">
+                    Port {inst.port} &middot; Archicad {inst.version}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setInstances(null)}
+              className="w-full bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -163,7 +239,7 @@ function Dashboard() {
                 {writing ? 'Writing to Excel...' : 'Confirm & Write'}
               </button>
               <button
-                onClick={() => setPreview(null)}
+                onClick={() => { setPreview(null); setSelectedPort(null) }}
                 disabled={writing}
                 className="flex-1 bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
               >
