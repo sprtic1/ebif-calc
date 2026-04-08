@@ -90,21 +90,21 @@ def create_project():
         'last_synced': None,
         'schedules': {
             'appliances': 0,
-            'cabinets': 0,
+            'bath_accessories': 0,
+            'cabinetry_hardware': 0,
+            'cabinetry_inserts': 0,
+            'cabinetry_style': 0,
             'countertops': 0,
-            'doors': 0,
-            'electrical': 0,
+            'decorative_lighting': 0,
+            'door_hardware': 0,
             'flooring': 0,
             'furniture': 0,
-            'hardware': 0,
-            'lighting': 0,
-            'mirrors': 0,
+            'lighting_electrical': 0,
             'plumbing': 0,
-            'specialty': 0,
+            'shower_glass_mirrors': 0,
+            'specialty_equipment': 0,
+            'surface_finishes': 0,
             'tile': 0,
-            'windows': 0,
-            'accessories': 0,
-            'zones': 0,
         },
     }
 
@@ -134,27 +134,12 @@ def get_project(project_id):
 
 # ---------- Archicad Sync Routes ----------
 
-# Mapping from schedules.json IDs to the 16 dashboard category keys
-SCHEDULE_ID_MAP = {
-    'appliances': 'appliances',
-    'cabinetry_hardware': 'cabinets',
-    'cabinetry_inserts': 'cabinets',
-    'cabinetry_style': 'cabinets',
-    'countertops': 'countertops',
-    'doors': 'doors',
-    'lighting_electrical': 'electrical',
-    'flooring': 'flooring',
-    'furniture': 'furniture',
-    'door_hardware': 'hardware',
-    'decorative_lighting': 'lighting',
-    'shower_glass_mirrors': 'mirrors',
-    'plumbing': 'plumbing',
-    'specialty_equipment': 'specialty',
-    'tile': 'tile',
-    'windows': 'windows',
-    'bath_accessories': 'accessories',
-    'surface_finishes': 'zones',
-    'covering_calc': 'zones',
+# The 16 schedule IDs match schedules.json directly (1:1 mapping)
+SCHEDULE_IDS = {
+    'appliances', 'bath_accessories', 'cabinetry_hardware', 'cabinetry_inserts',
+    'cabinetry_style', 'countertops', 'decorative_lighting', 'door_hardware',
+    'flooring', 'furniture', 'lighting_electrical', 'plumbing',
+    'shower_glass_mirrors', 'specialty_equipment', 'surface_finishes', 'tile',
 }
 
 
@@ -174,13 +159,12 @@ def preview_archicad(project_id):
     except Exception as e:
         return jsonify({'error': f'Archicad sync failed: {e}'}), 500
 
-    # Aggregate counts into the 16 dashboard categories
+    # Map counts to the 16 dashboard categories (1:1 with schedules.json IDs)
     dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
     for sched in result.get('schedules', []):
         sid = sched['id']
-        dashboard_key = SCHEDULE_ID_MAP.get(sid)
-        if dashboard_key and dashboard_key in dashboard_counts:
-            dashboard_counts[dashboard_key] += sched['count']
+        if sid in dashboard_counts:
+            dashboard_counts[sid] = sched['count']
 
     return jsonify({
         'counts': dashboard_counts,
@@ -219,12 +203,11 @@ def refresh_archicad(project_id):
     except Exception as e:
         excel_error = f'Excel write failed: {e}'
 
-    # Update project counts and timestamp
+    # Update project counts and timestamp (1:1 mapping)
     dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
     for sid, count in result.get('counts', {}).items():
-        dashboard_key = SCHEDULE_ID_MAP.get(sid)
-        if dashboard_key and dashboard_key in dashboard_counts:
-            dashboard_counts[dashboard_key] += count
+        if sid in dashboard_counts:
+            dashboard_counts[sid] = count
 
     project['schedules'] = dashboard_counts
     project['last_synced'] = datetime.utcnow().isoformat() + 'Z'

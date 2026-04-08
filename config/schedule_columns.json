@@ -60,13 +60,6 @@
       {"label": "SOURCE", "source": "user:SOURCE"},
       {"label": "NOTES", "source": "user:NOTES"}
     ]},
-    "covering_calc": {"archicad": "_default", "manual": [
-      {"label": "Area Per Box", "source": "user:Area Per Box of Tile"},
-      {"label": "Waste %", "source": "user:Covering Waste Percentage"},
-      {"label": "Total Area", "source": "user:Area of Total Covering including Waste"},
-      {"label": "Cost/sqft", "source": "user:Cost per sqft of Covering"},
-      {"label": "# Boxes", "source": "user:Number of Boxes of Tile"}
-    ]},
     "decorative_lighting": {"archicad": "_default", "manual": [
       {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
       {"label": "MODEL #", "source": "user:MODEL #"},
@@ -83,10 +76,6 @@
       {"label": "FINISH", "source": "user:FINISH"},
       {"label": "DOOR FINISH", "source": "user:DOOR FINISH"},
       {"label": "COST", "source": "user:COST"}
-    ]},
-    "doors": {"archicad": "_default", "manual": [
-      {"label": "COST", "source": "user:COST"},
-      {"label": "NOTES", "source": "user:NOTES"}
     ]},
     "flooring": {"archicad": "_default", "manual": "_default"},
     "furniture": {"archicad": "_default", "manual": [
@@ -129,10 +118,6 @@
       {"label": "THICKNESS", "source": "user:THICKNESS"},
       {"label": "GROUT", "source": "user:GROUT"},
       {"label": "SOURCE", "source": "user:SOURCE"},
-      {"label": "COST", "source": "user:COST"},
-      {"label": "NOTES", "source": "user:NOTES"}
-    ]},
-    "windows": {"archicad": "_default", "manual": [
       {"label": "COST", "source": "user:COST"},
       {"label": "NOTES", "source": "user:NOTES"}
     ]}

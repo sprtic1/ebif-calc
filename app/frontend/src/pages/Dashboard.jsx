@@ -3,21 +3,21 @@ import { useParams, Link } from 'react-router-dom'
 
 const SCHEDULE_LABELS = {
   appliances: 'Appliances',
-  cabinets: 'Cabinets',
+  bath_accessories: 'Bath Accessories',
+  cabinetry_hardware: 'Cabinetry Hardware',
+  cabinetry_inserts: 'Cabinetry Inserts',
+  cabinetry_style: 'Cabinetry Style & Species',
   countertops: 'Countertops',
-  doors: 'Doors',
-  electrical: 'Electrical',
+  decorative_lighting: 'Decorative Lighting',
+  door_hardware: 'Door Hardware',
   flooring: 'Flooring',
   furniture: 'Furniture',
-  hardware: 'Hardware',
-  lighting: 'Lighting',
-  mirrors: 'Mirrors',
+  lighting_electrical: 'Lighting & Electrical',
   plumbing: 'Plumbing',
-  specialty: 'Specialty',
+  shower_glass_mirrors: 'Shower Glass & Mirrors',
+  specialty_equipment: 'Specialty Equipment',
+  surface_finishes: 'Surface Finishes',
   tile: 'Tile',
-  windows: 'Windows',
-  accessories: 'Accessories',
-  zones: 'Zones',
 }
 
 function Dashboard() {

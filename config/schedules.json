@@ -176,33 +176,6 @@
       ]
     },
     {
-      "id": "covering_calc",
-      "name": "Covering Calculations",
-      "group": "EBIF COVERING CALCULATIONS*",
-      "toggle_guid": "DBB11FC5-4567-4BF6-AF3A-B639438381F9",
-      "element_types": [
-        "Object",
-        "Morph",
-        "Slab"
-      ],
-      "properties": {
-        "Area Per Box of Tile": "722E8923-8B5E-436E-A281-DCED64CD472C",
-        "Covering Waste Percentage": "465EB6DD-5507-460F-BBA0-566018C30AE8",
-        "Area of Total Covering including Waste": "C4D8D82F-E3FE-47CF-8737-F391196174BB",
-        "Cost per sqft of Covering": "405DD214-404D-44B6-8E2A-0111C6506CE3",
-        "Cost of Total Covering": "E1DA18D0-F74A-4F8A-B0E5-519FFBF92DA3",
-        "Cost of Total Covering including Waste": "F5266F23-02BB-44AD-8710-52BC30556935",
-        "Number of Boxes of Tile": "85D45CAB-742D-4EA0-9077-E263614633B6"
-      },
-      "columns": [
-        "Area Per Box of Tile",
-        "Covering Waste Percentage",
-        "Area of Total Covering including Waste",
-        "Cost per sqft of Covering",
-        "Number of Boxes of Tile"
-      ]
-    },
-    {
       "id": "decorative_lighting",
       "name": "Decorative Lighting",
       "group": "EBIF DECORATIVE LIGHTING",
@@ -259,25 +232,6 @@
         "FINISH",
         "DOOR FINISH",
         "COST"
-      ]
-    },
-    {
-      "id": "doors",
-      "name": "Doors",
-      "group": "EBIF DOORS",
-      "toggle_guid": "07B6B610-5F87-46D6-A369-370F75948037",
-      "element_types": [
-        "Door"
-      ],
-      "properties": {
-        "TEAR SHEET #": "FC2D36C5-B801-4EBC-9114-8904B1481894",
-        "COST": "09EDEFB5-F4DD-4009-AE29-742E8799EB93",
-        "NOTES": "C242C947-4978-4CB7-BF3B-9A07327E0AAE"
-      },
-      "columns": [
-        "TEAR SHEET #",
-        "COST",
-        "NOTES"
       ]
     },
     {
@@ -510,23 +464,6 @@
         "THICKNESS",
         "GROUT",
         "SOURCE",
-        "COST",
-        "NOTES"
-      ]
-    },
-    {
-      "id": "windows",
-      "name": "Windows",
-      "group": "EBIF WINDOWS",
-      "toggle_guid": "66905CA6-813B-4E1E-852A-A958087D44BD",
-      "element_types": [
-        "Window"
-      ],
-      "properties": {
-        "COST": "8D80C28C-9EC7-4FFC-93CB-D5DCA5D4E8F6",
-        "NOTES": "F48174D3-0C75-4873-9F9B-C1D3DC43F715"
-      },
-      "columns": [
         "COST",
         "NOTES"
       ]
