@@ -90,24 +90,21 @@ def create_project():
         'last_synced': None,
         'schedules': {
             'appliances': 0,
-            'bath_accessories': 0,
-            'cabinetry_hardware': 0,
-            'cabinetry_inserts': 0,
-            'cabinetry_style_species': 0,
+            'cabinets': 0,
             'countertops': 0,
-            'covering_calculations': 0,
-            'decorative_lighting': 0,
-            'door_hardware': 0,
             'doors': 0,
+            'electrical': 0,
             'flooring': 0,
             'furniture': 0,
-            'lighting_electrical': 0,
+            'hardware': 0,
+            'lighting': 0,
+            'mirrors': 0,
             'plumbing': 0,
-            'shower_glass_mirrors': 0,
-            'specialty_equipment': 0,
-            'surface_finishes': 0,
+            'specialty': 0,
             'tile': 0,
             'windows': 0,
+            'accessories': 0,
+            'zones': 0,
         },
     }
 
@@ -133,6 +130,114 @@ def get_project(project_id):
     if not project:
         return jsonify({'error': 'Project not found'}), 404
     return jsonify(project)
+
+
+# ---------- Archicad Sync Routes ----------
+
+# Mapping from schedules.json IDs to the 16 dashboard category keys
+SCHEDULE_ID_MAP = {
+    'appliances': 'appliances',
+    'cabinetry_hardware': 'cabinets',
+    'cabinetry_inserts': 'cabinets',
+    'cabinetry_style': 'cabinets',
+    'countertops': 'countertops',
+    'doors': 'doors',
+    'lighting_electrical': 'electrical',
+    'flooring': 'flooring',
+    'furniture': 'furniture',
+    'door_hardware': 'hardware',
+    'decorative_lighting': 'lighting',
+    'shower_glass_mirrors': 'mirrors',
+    'plumbing': 'plumbing',
+    'specialty_equipment': 'specialty',
+    'tile': 'tile',
+    'windows': 'windows',
+    'bath_accessories': 'accessories',
+    'surface_finishes': 'zones',
+    'covering_calc': 'zones',
+}
+
+
+@app.route('/api/projects/<project_id>/preview', methods=['GET'])
+def preview_archicad(project_id):
+    """Connect to Archicad via Tapir and return element counts per category."""
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    try:
+        from services.tapir import preview_counts
+        result = preview_counts()
+    except ConnectionError as e:
+        return jsonify({'error': str(e)}), 503
+    except Exception as e:
+        return jsonify({'error': f'Archicad sync failed: {e}'}), 500
+
+    # Aggregate counts into the 16 dashboard categories
+    dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
+    for sched in result.get('schedules', []):
+        sid = sched['id']
+        dashboard_key = SCHEDULE_ID_MAP.get(sid)
+        if dashboard_key and dashboard_key in dashboard_counts:
+            dashboard_counts[dashboard_key] += sched['count']
+
+    return jsonify({
+        'counts': dashboard_counts,
+        'detail': result.get('schedules', []),
+        'total': result.get('total', 0),
+    })
+
+
+@app.route('/api/projects/<project_id>/refresh', methods=['POST'])
+def refresh_archicad(project_id):
+    """Full Archicad pull — extract data, write to Excel, update project."""
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    folder = project.get('folder_location', '')
+    if not folder:
+        return jsonify({'error': 'Project has no folder location set'}), 400
+
+    try:
+        from services.tapir import full_extract
+        result = full_extract()
+    except ConnectionError as e:
+        return jsonify({'error': str(e)}), 503
+    except Exception as e:
+        return jsonify({'error': f'Archicad extraction failed: {e}'}), 500
+
+    # Write to Excel
+    excel_error = None
+    try:
+        from services.excel_writer import write_to_master
+        write_to_master(folder, result['schedules'], result['schedule_defs'])
+    except FileNotFoundError as e:
+        excel_error = str(e)
+    except Exception as e:
+        excel_error = f'Excel write failed: {e}'
+
+    # Update project counts and timestamp
+    dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
+    for sid, count in result.get('counts', {}).items():
+        dashboard_key = SCHEDULE_ID_MAP.get(sid)
+        if dashboard_key and dashboard_key in dashboard_counts:
+            dashboard_counts[dashboard_key] += count
+
+    project['schedules'] = dashboard_counts
+    project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
+    save_projects(projects)
+
+    response = {
+        'project': project,
+        'total': result.get('total', 0),
+    }
+    if excel_error:
+        response['excel_error'] = excel_error
+
+    return jsonify(response)
 
 
 # ---------- Frontend (production) ----------
