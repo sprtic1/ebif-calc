@@ -30,6 +30,32 @@ def save_projects(projects):
 
 # ---------- API Routes ----------
 
+@app.route('/api/browse-folder', methods=['GET'])
+def browse_folder():
+    """Open a native Windows folder picker dialog and return the selected path."""
+    import threading
+
+    result = {'path': ''}
+
+    def _pick():
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        folder = filedialog.askdirectory(title='Select Project Folder')
+        root.destroy()
+        result['path'] = folder or ''
+
+    # tkinter must run on its own thread when called from Flask
+    t = threading.Thread(target=_pick)
+    t.start()
+    t.join(timeout=120)
+
+    if not result['path']:
+        return jsonify({'path': '', 'cancelled': True})
+    return jsonify({'path': result['path'], 'cancelled': False})
+
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     projects = load_projects()

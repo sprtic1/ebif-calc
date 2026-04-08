@@ -24,9 +24,9 @@ function NewProject() {
   })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [browsing, setBrowsing] = useState(false)
 
-  const handleFolderChange = (e) => {
-    const folder = e.target.value
+  const applyFolder = (folder) => {
     const parsed = parseFolderPath(folder)
     setForm({
       folder_location: folder,
@@ -34,6 +34,25 @@ function NewProject() {
       client_name: parsed.client_name,
       address: parsed.address,
     })
+  }
+
+  const handleFolderChange = (e) => {
+    applyFolder(e.target.value)
+  }
+
+  const handleBrowse = async () => {
+    setBrowsing(true)
+    try {
+      const res = await fetch('/api/browse-folder')
+      const data = await res.json()
+      if (data.path && !data.cancelled) {
+        applyFolder(data.path)
+      }
+    } catch {
+      setError('Could not open folder picker — is the backend running?')
+    } finally {
+      setBrowsing(false)
+    }
   }
 
   const handleChange = (e) => {
@@ -76,16 +95,26 @@ function NewProject() {
         {/* Folder Location — triggers auto-fill */}
         <div>
           <label className="block font-heading font-bold text-olive mb-1">Folder Location *</label>
-          <input
-            name="folder_location"
-            value={form.folder_location}
-            onChange={handleFolderChange}
-            required
-            className="w-full border border-sage rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-olive font-mono text-sm"
-            placeholder="C:\Users\linco\EID Dropbox\PROJECTS\MCCOLLUM - 408 CAYUSE COURT"
-          />
+          <div className="flex gap-2">
+            <input
+              name="folder_location"
+              value={form.folder_location}
+              onChange={handleFolderChange}
+              required
+              className="flex-1 border border-sage rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-olive font-mono text-sm"
+              placeholder="C:\Users\linco\EID Dropbox\PROJECTS\MCCOLLUM - 408 CAYUSE COURT"
+            />
+            <button
+              type="button"
+              onClick={handleBrowse}
+              disabled={browsing}
+              className="bg-olive text-white font-heading font-bold px-4 py-2 rounded hover:bg-warm-gray transition disabled:opacity-50 whitespace-nowrap"
+            >
+              {browsing ? 'Opening...' : 'Browse'}
+            </button>
+          </div>
           <p className="text-xs text-warm-gray mt-1">
-            Paste the full project folder path — fields below auto-fill from the folder name
+            Browse or paste the full project folder path — fields below auto-fill from the folder name
           </p>
         </div>
 
