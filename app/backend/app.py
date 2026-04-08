@@ -7,9 +7,11 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from services.template import copy_template, slugify
+from routes.archicad import archicad_bp
 
 app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
 CORS(app)
+app.register_blueprint(archicad_bp)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 PROJECTS_FILE = os.path.abspath(os.path.join(DATA_DIR, 'projects.json'))
@@ -130,97 +132,6 @@ def get_project(project_id):
     if not project:
         return jsonify({'error': 'Project not found'}), 404
     return jsonify(project)
-
-
-# ---------- Archicad Sync Routes ----------
-
-# The 16 schedule IDs match schedules.json directly (1:1 mapping)
-SCHEDULE_IDS = {
-    'appliances', 'bath_accessories', 'cabinetry_hardware', 'cabinetry_inserts',
-    'cabinetry_style', 'countertops', 'decorative_lighting', 'door_hardware',
-    'flooring', 'furniture', 'lighting_electrical', 'plumbing',
-    'shower_glass_mirrors', 'specialty_equipment', 'surface_finishes', 'tile',
-}
-
-
-@app.route('/api/projects/<project_id>/preview', methods=['GET'])
-def preview_archicad(project_id):
-    """Connect to Archicad via Tapir and return element counts per category."""
-    projects = load_projects()
-    project = next((p for p in projects if p['id'] == project_id), None)
-    if not project:
-        return jsonify({'error': 'Project not found'}), 404
-
-    try:
-        from services.tapir import preview_counts
-        result = preview_counts()
-    except ConnectionError as e:
-        return jsonify({'error': str(e)}), 503
-    except Exception as e:
-        return jsonify({'error': f'Archicad sync failed: {e}'}), 500
-
-    # Map counts to the 16 dashboard categories (1:1 with schedules.json IDs)
-    dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
-    for sched in result.get('schedules', []):
-        sid = sched['id']
-        if sid in dashboard_counts:
-            dashboard_counts[sid] = sched['count']
-
-    return jsonify({
-        'counts': dashboard_counts,
-        'detail': result.get('schedules', []),
-        'total': result.get('total', 0),
-    })
-
-
-@app.route('/api/projects/<project_id>/refresh', methods=['POST'])
-def refresh_archicad(project_id):
-    """Full Archicad pull — extract data, write to Excel, update project."""
-    projects = load_projects()
-    project = next((p for p in projects if p['id'] == project_id), None)
-    if not project:
-        return jsonify({'error': 'Project not found'}), 404
-
-    folder = project.get('folder_location', '')
-    if not folder:
-        return jsonify({'error': 'Project has no folder location set'}), 400
-
-    try:
-        from services.tapir import full_extract
-        result = full_extract()
-    except ConnectionError as e:
-        return jsonify({'error': str(e)}), 503
-    except Exception as e:
-        return jsonify({'error': f'Archicad extraction failed: {e}'}), 500
-
-    # Write to Excel
-    excel_error = None
-    try:
-        from services.excel_writer import write_to_master
-        write_to_master(folder, result['schedules'], result['schedule_defs'])
-    except FileNotFoundError as e:
-        excel_error = str(e)
-    except Exception as e:
-        excel_error = f'Excel write failed: {e}'
-
-    # Update project counts and timestamp (1:1 mapping)
-    dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
-    for sid, count in result.get('counts', {}).items():
-        if sid in dashboard_counts:
-            dashboard_counts[sid] = count
-
-    project['schedules'] = dashboard_counts
-    project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
-    save_projects(projects)
-
-    response = {
-        'project': project,
-        'total': result.get('total', 0),
-    }
-    if excel_error:
-        response['excel_error'] = excel_error
-
-    return jsonify(response)
 
 
 # ---------- Frontend (production) ----------
