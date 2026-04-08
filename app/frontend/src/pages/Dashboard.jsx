@@ -28,11 +28,13 @@ function Dashboard() {
 
   // Archicad sync state
   const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState('')
   const [syncError, setSyncError] = useState('')
   const [instances, setInstances] = useState(null)
   const [selectedPort, setSelectedPort] = useState(null)
   const [preview, setPreview] = useState(null)
   const [writing, setWriting] = useState(false)
+  const [retryTimer, setRetryTimer] = useState(null)
 
   const fetchProject = () => {
     setLoading(true)
@@ -55,35 +57,49 @@ function Dashboard() {
     fetchProject()
   }, [id])
 
-  const handleRefreshClick = async () => {
-    setSyncing(true)
-    setSyncError('')
-    setInstances(null)
-    setPreview(null)
-    setSelectedPort(null)
+  const cancelRetry = () => {
+    if (retryTimer) {
+      clearTimeout(retryTimer)
+      setRetryTimer(null)
+    }
+    setSyncing(false)
+    setSyncStatus('')
+  }
 
+  const scanForInstances = async () => {
     try {
       const res = await fetch('/api/archicad/instances')
       const data = await res.json()
 
-      if (!data.instances || data.instances.length === 0) {
-        setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
-        setSyncing(false)
+      if (data.instances && data.instances.length > 0) {
+        // Found instances — stop retrying
+        setSyncStatus('')
+        if (data.instances.length === 1) {
+          await fetchPreview(data.instances[0].port)
+        } else {
+          setInstances(data.instances)
+          setSyncing(false)
+        }
         return
       }
-
-      if (data.instances.length === 1) {
-        // Only one instance — go straight to preview
-        await fetchPreview(data.instances[0].port)
-      } else {
-        // Multiple instances — show selector
-        setInstances(data.instances)
-        setSyncing(false)
-      }
     } catch {
-      setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
-      setSyncing(false)
+      // Network error — keep retrying
     }
+
+    // No instances found — retry in 5 seconds
+    setSyncStatus('Waiting for Tapir...')
+    const timer = setTimeout(() => scanForInstances(), 5000)
+    setRetryTimer(timer)
+  }
+
+  const handleRefreshClick = async () => {
+    setSyncing(true)
+    setSyncError('')
+    setSyncStatus('Scanning...')
+    setInstances(null)
+    setPreview(null)
+    setSelectedPort(null)
+    await scanForInstances()
   }
 
   const handleInstanceSelect = async (port) => {
@@ -156,13 +172,23 @@ function Dashboard() {
           {project.client_name && <p className="text-warm-gray">{project.client_name}</p>}
           {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
         </div>
-        <button
-          onClick={handleRefreshClick}
-          disabled={syncing || writing}
-          className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
-        >
-          {syncing ? 'Scanning...' : 'Refresh from Archicad'}
-        </button>
+        <div className="flex items-center gap-3">
+          {syncing && syncStatus && (
+            <button
+              onClick={cancelRetry}
+              className="text-warm-gray font-heading font-bold px-4 py-3 rounded-lg hover:text-red-600 transition text-sm"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={handleRefreshClick}
+            disabled={syncing || writing}
+            className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
+          >
+            {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
+          </button>
+        </div>
       </div>
 
       {/* Sync error banner */}
