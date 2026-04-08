@@ -39,6 +39,9 @@ def copy_template(project_folder):
     os.makedirs(dest_dir, exist_ok=True)
 
     dest = os.path.join(dest_dir, 'EID Master Schedule.xlsm')
-    shutil.copy2(source, dest)
 
+    if os.path.exists(dest):
+        return dest  # preserve existing file — never overwrite
+
+    shutil.copy2(source, dest)
     return dest
