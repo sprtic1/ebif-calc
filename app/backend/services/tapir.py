@@ -93,45 +93,22 @@ def _probe_port(port):
 def scan_instances():
     """Scan ports 19720-19734 for running Archicad instances.
 
-    First does a fast sequential scan — if exactly one instance is found
-    on the first responding port, returns immediately without scanning
-    the rest. Otherwise scans all remaining ports in parallel with
-    2-second timeouts to find every instance.
+    All 15 ports are probed in parallel with 2-second timeouts,
+    so the entire scan completes in ~2 seconds regardless of how
+    many ports are dead.
 
     Returns list of {port, project_name, version} sorted by port.
     """
     import concurrent.futures
 
-    # Fast path: scan sequentially, stop early if we find one and
-    # the next few ports are dead (likely only one instance running)
-    first_hit = None
-    first_hit_port = None
-    for port in PORT_RANGE:
-        result = _probe_port(port)
-        if result:
-            first_hit = result
-            first_hit_port = port
-            break
-
-    if first_hit is None:
-        return []
-
-    # Found one — scan remaining ports in parallel to check for more
-    remaining_ports = [p for p in PORT_RANGE if p != first_hit_port]
-    more = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(remaining_ports)) as pool:
-        futures = {pool.submit(_probe_port, p): p for p in remaining_ports}
+    instances = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as pool:
+        futures = {pool.submit(_probe_port, p): p for p in PORT_RANGE}
         for f in concurrent.futures.as_completed(futures):
             result = f.result()
             if result:
-                more.append(result)
+                instances.append(result)
 
-    if not more:
-        # Only one instance — return immediately
-        return [first_hit]
-
-    # Multiple instances found
-    instances = [first_hit] + more
     instances.sort(key=lambda x: x["port"])
     return instances
 
