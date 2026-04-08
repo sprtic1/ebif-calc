@@ -309,7 +309,7 @@ function Dashboard() {
               })}
             </div>
             <p className="text-xs text-warm-gray mb-4">
-              This will write Archicad data into the EID Master Schedule. Manual columns will NOT be touched.
+              This will write Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
             </p>
             {/* Progress bar during write */}
             {writing && writeProgress && (

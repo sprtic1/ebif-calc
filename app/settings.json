@@ -1,7 +1,7 @@
 {
   "tapir_port": 19724,
   "dropbox_root": "C:/Users/linco/EID Dropbox",
-  "template_source": "PROJECTS/Z PROJECT TEMPLATE/EBIF/EXCEL/MASTER/EID Master Schedule.xlsm",
+  "template_source": "PROJECTS/Z PROJECT TEMPLATE/EBIF/EXCEL/MASTER/EBIF Master Template.xlsm",
   "projects_folder": "PROJECTS",
   "clickup_api_token": "",
   "clickup_workspace_id": "",

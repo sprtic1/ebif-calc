@@ -18,11 +18,11 @@ def slugify(text):
 
 
 def copy_template(project_folder):
-    """Copy the EID Master Schedule template into the project folder.
+    """Copy the EBIF Master Template template into the project folder.
 
     The template source is defined in settings.json as a relative path
     under dropbox_root. The copy goes to:
-        {project_folder}/EBIF/EXCEL/MASTER/EID Master Schedule.xlsm
+        {project_folder}/EBIF/EXCEL/MASTER/EBIF Master Template.xlsm
 
     Creates subfolders if they don't exist.
     Returns the destination file path on success, or raises an error.
@@ -38,7 +38,7 @@ def copy_template(project_folder):
     dest_dir = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER')
     os.makedirs(dest_dir, exist_ok=True)
 
-    dest = os.path.join(dest_dir, 'EID Master Schedule.xlsm')
+    dest = os.path.join(dest_dir, 'EBIF Master Template.xlsm')
 
     if os.path.exists(dest):
         return dest  # preserve existing file — never overwrite

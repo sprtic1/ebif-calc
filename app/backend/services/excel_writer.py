@@ -1,4 +1,4 @@
-"""Master Schedule Excel Writer — writes Archicad data into EID Master Schedule.xlsm.
+"""Master Schedule Excel Writer — writes Archicad data into EBIF Master Template.xlsm.
 
 Opens the project's existing .xlsm workbook, finds each schedule's sheet,
 and writes ONLY Archicad-sourced columns. Manual columns (vendor, cost, notes)
@@ -44,7 +44,7 @@ def write_to_master(
     schedule_defs,
     on_progress=None,
 ):
-    """Write Archicad data into the project's EID Master Schedule.xlsm.
+    """Write Archicad data into the project's EBIF Master Template.xlsm.
 
     Args:
         project_folder: Full path to the project folder
@@ -55,7 +55,7 @@ def write_to_master(
     Returns:
         dict mapping schedule_id -> number of rows written
     """
-    xlsm_path = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER', 'EID Master Schedule.xlsm')
+    xlsm_path = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
 
     if not os.path.exists(xlsm_path):
         raise FileNotFoundError(f"Master Schedule not found: {xlsm_path}")
