@@ -1,18 +1,20 @@
 """EBIF Master Template Excel Writer — writes Archicad data into the template.
 
-Fixed column layout for ALL 16 schedule tabs:
-  A = EBIF UID       (Archicad)
-  B = QTY            (Archicad)
-  C = Tear Sheet #   (Archicad)
-  D = Location       (Archicad)
-  E–K = MANUAL       (never touch — Manufacturer, Model, Size, Finish, Notes, Cost, URL)
-  L+ = Reference     (Archicad — additional reference data after manual columns)
+All Archicad data is written starting at column N (14) onward:
+  N = EBIF UID, O = QTY, P = Tear Sheet #, Q = Location,
+  R+ = Element Type, Library Part Name, Layer, Classifications, etc.
 
-Exception: Decorative Lighting tab has manual columns E–M, reference starts at N.
+Columns A–D contain formulas that reference the Archicad data:
+  A =N{row}  (EBIF UID)
+  B =O{row}  (QTY)
+  C =P{row}  (Tear Sheet #)
+  D =Q{row}  (Location)
+
+Columns E–K are MANUAL (never touched). Exception: Decorative Lighting E–M.
+Table of Contents tab is never modified.
 
 Row 4 = header row. Data starts at row 5.
-Old PQ formulas in A–D are replaced with actual Archicad values.
-On refresh, clears A–D and reference columns from row 5 down, NEVER touches manual columns.
+On refresh, clears column N onward + A–D formulas from row 5 down.
 
 Uses openpyxl with keep_vba=True to preserve macros.
 """
@@ -22,12 +24,12 @@ import os
 
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 logger = logging.getLogger(__name__)
 
 # EID Brand Colors
 OLIVE = "868C54"
-WARM_GRAY = "737569"
 WHITE = "FFFFFF"
 
 # Styling
@@ -43,28 +45,28 @@ THIN_BORDER = Border(
     bottom=Side(style="thin", color="CCCCCC"),
 )
 
-# Fixed Archicad columns (1-indexed): A=1, B=2, C=3, D=4
-ARCHICAD_COLS = {
-    1: "EBIF UID",
-    2: "Qty",
-    3: "TEAR SHEET #",
-    4: "Location",
-}
-
 HEADER_ROW = 4
 DATA_START = 5
 
-# Manual column ranges (1-indexed, inclusive) — NEVER write to these
-# Most tabs: E(5) through K(11)
-MANUAL_RANGE_DEFAULT = (5, 11)    # E–K
-# Decorative Lighting: E(5) through M(13)
-MANUAL_RANGE_LIGHTING = (5, 13)   # E–M
+# Archicad data starts at column N (14)
+AC_START = 14  # column N
 
-# Reference data starts after manual columns
-REF_START_DEFAULT = 12   # column L
-REF_START_LIGHTING = 14  # column N
+# Core 4 Archicad fields written at N, O, P, Q
+CORE_FIELDS = [
+    ("EBIF UID", "EBIF UID"),
+    ("QTY", "Qty"),
+    ("Tear Sheet #", "TEAR SHEET #"),
+    ("Location", "Location"),
+]
 
-# Schedule ID for Decorative Lighting
+# Columns A–D get formulas referencing N–Q
+FORMULA_COLS = [1, 2, 3, 4]  # A, B, C, D
+FORMULA_SRC_COLS = [14, 15, 16, 17]  # N, O, P, Q
+
+# Tabs to skip
+SKIP_TABS = {"Table of Contents"}
+
+# Schedule ID for Decorative Lighting (manual cols E–M instead of E–K)
 LIGHTING_ID = "decorative_lighting"
 
 
@@ -106,7 +108,7 @@ def write_to_master(
             result[sid] = 0
             continue
 
-        # Find matching sheet — tabs have emoji prefixes (e.g. "🍳 Appliances")
+        # Find matching sheet (handles emoji prefixes)
         ws = _find_sheet(wb, sname)
 
         if ws is None:
@@ -114,46 +116,55 @@ def write_to_master(
             result[sid] = 0
             continue
 
-        # Determine reference column start based on schedule type
-        is_lighting = (sid == LIGHTING_ID)
-        ref_start = REF_START_LIGHTING if is_lighting else REF_START_DEFAULT
-        manual_range = MANUAL_RANGE_LIGHTING if is_lighting else MANUAL_RANGE_DEFAULT
+        # Skip Table of Contents
+        if any(skip in ws.title for skip in SKIP_TABS):
+            result[sid] = 0
+            continue
 
-        # Build list of reference column labels (additional Archicad data after manual cols)
+        # Build list of extra reference labels beyond the core 4
         archicad_labels = sdef.get('_archicad_col_labels', [])
-        # Filter out the 4 fixed columns already handled
-        fixed_labels = set(ARCHICAD_COLS.values())
-        ref_labels = [lbl for lbl in archicad_labels if lbl not in fixed_labels]
+        core_keys = {f[1] for f in CORE_FIELDS}
+        ref_labels = [lbl for lbl in archicad_labels if lbl not in core_keys]
 
-        # Clear old Archicad data from row 5 downward (columns A–D + reference columns)
-        _clear_archicad_data(ws, ref_start, len(ref_labels), manual_range)
+        # Total Archicad columns: 4 core + N reference
+        total_ac_cols = 4 + len(ref_labels)
 
-        # Write data rows starting at row 5
-        for i, row_data in enumerate(rows):
-            row_num = DATA_START + i
+        # Clear old data: columns A–D and N onward from row 5 down
+        _clear_data(ws, total_ac_cols)
 
-            # A = EBIF UID
-            _write_cell(ws, row_num, 1, row_data.get('EBIF UID', ''), i)
-            # B = QTY
-            _write_cell(ws, row_num, 2, row_data.get('Qty', 1), i)
-            # C = Tear Sheet #
-            _write_cell(ws, row_num, 3, row_data.get('TEAR SHEET #', ''), i)
-            # D = Location
-            _write_cell(ws, row_num, 4, row_data.get('Location', ''), i)
-
-            # Reference columns (L+ or N+ for lighting)
-            for j, lbl in enumerate(ref_labels):
-                col_idx = ref_start + j
-                _write_cell(ws, row_num, col_idx, row_data.get(lbl, ''), i)
-
-        # Write reference column headers at row 4 if we have any
-        for j, lbl in enumerate(ref_labels):
-            col_idx = ref_start + j
-            cell = ws.cell(row=HEADER_ROW, column=col_idx, value=lbl)
+        # Write Archicad data headers at row 4, starting at column N
+        all_headers = [f[0] for f in CORE_FIELDS] + ref_labels
+        for j, header in enumerate(all_headers):
+            col = AC_START + j
+            cell = ws.cell(row=HEADER_ROW, column=col, value=header)
             cell.font = HEADER_FONT
             cell.fill = HEADER_FILL
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = THIN_BORDER
+
+        # Write data rows
+        for i, row_data in enumerate(rows):
+            row_num = DATA_START + i
+
+            # Core 4 fields at N, O, P, Q
+            _write_cell(ws, row_num, AC_START + 0, row_data.get('EBIF UID', ''), i)
+            _write_cell(ws, row_num, AC_START + 1, row_data.get('Qty', 1), i)
+            _write_cell(ws, row_num, AC_START + 2, row_data.get('TEAR SHEET #', ''), i)
+            _write_cell(ws, row_num, AC_START + 3, row_data.get('Location', ''), i)
+
+            # Extra reference columns at R, S, T, ...
+            for j, lbl in enumerate(ref_labels):
+                col = AC_START + 4 + j
+                _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
+
+            # Formulas in A–D referencing N–Q
+            for dest_col, src_col in zip(FORMULA_COLS, FORMULA_SRC_COLS):
+                src_letter = get_column_letter(src_col)
+                cell = ws.cell(row=row_num, column=dest_col, value=f"={src_letter}{row_num}")
+                cell.font = BODY_FONT
+                cell.border = THIN_BORDER
+                cell.alignment = Alignment(vertical="center", wrap_text=True)
+                cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
 
         result[sid] = len(rows)
         logger.info("Wrote %d rows to sheet '%s'", len(rows), ws.title)
@@ -167,29 +178,23 @@ def _find_sheet(wb, schedule_name):
     """Find a sheet by schedule name, handling emoji prefixes.
 
     Sheets have emoji prefixes like '🍳 Appliances'. We match by checking
-    if any sheet name ends with the schedule name (after the emoji + space).
+    if any sheet name ends with the schedule name.
     """
-    # Try exact match first
     if schedule_name in wb.sheetnames:
         return wb[schedule_name]
 
-    # Try matching the part after the emoji prefix
     for sheet_name in wb.sheetnames:
-        # Strip leading emoji characters and spaces
+        # Strip leading non-ASCII characters and spaces (emoji prefix)
         stripped = sheet_name
         while stripped and (not stripped[0].isascii() or stripped[0] == ' '):
             stripped = stripped[1:]
-        # Also try stripping just the first 2 chars (emoji + space)
         after_emoji = sheet_name[2:] if len(sheet_name) > 2 else sheet_name
 
         if stripped == schedule_name or after_emoji == schedule_name:
             return wb[sheet_name]
-
-        # Fuzzy: check if schedule_name is contained at the end
         if sheet_name.endswith(schedule_name):
             return wb[sheet_name]
 
-    # Try truncated (Excel max 31 chars)
     truncated = schedule_name[:31]
     if truncated in wb.sheetnames:
         return wb[truncated]
@@ -208,31 +213,28 @@ def _write_cell(ws, row, col, value, row_index):
     cell.fill = LOCKED_ALT_FILL if row_index % 2 == 0 else LOCKED_FILL
 
 
-def _clear_archicad_data(ws, ref_start, ref_count, manual_range):
+def _clear_data(ws, total_ac_cols):
     """Clear old Archicad data from row 5 downward.
 
-    Clears columns A–D (1–4) and reference columns (ref_start onward).
-    NEVER touches manual columns (manual_range).
+    Clears:
+      - Columns A–D (formulas)
+      - Column N onward (Archicad data)
+    NEVER touches columns E–M (manual columns).
     """
     max_row = ws.max_row or DATA_START
     if max_row < DATA_START:
         return
 
-    manual_start, manual_end = manual_range
+    # Determine the furthest Archicad column we need to clear
+    max_ac_col = AC_START + total_ac_cols
+    # Also clear anything beyond that from previous writes
+    furthest = max(max_ac_col, ws.max_column + 1) if ws.max_column else max_ac_col
 
     for row_num in range(DATA_START, max_row + 1):
-        # Clear columns A–D
+        # Clear A–D (formula columns)
         for col in range(1, 5):
             ws.cell(row=row_num, column=col).value = None
 
-        # Clear reference columns after manual range
-        for col_offset in range(ref_count):
-            col = ref_start + col_offset
-            if col < manual_start or col > manual_end:
-                ws.cell(row=row_num, column=col).value = None
-
-        # Also clear any leftover data in columns beyond the manual range
-        # that might have old PQ formulas
-        for col in range(ref_start, ws.max_column + 1):
-            if col < manual_start or col > manual_end:
-                ws.cell(row=row_num, column=col).value = None
+        # Clear N onward (Archicad data columns)
+        for col in range(AC_START, furthest):
+            ws.cell(row=row_num, column=col).value = None
