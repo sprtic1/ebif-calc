@@ -11,6 +11,14 @@ output/*.json
 *.json
 !config/*.json
 !tests/mock_data/*.json
+!app/data/*.json
+!app/settings.json
+!app/frontend/package.json
+!app/frontend/package-lock.json
+
+# Node
+node_modules/
+app/frontend/dist/
 
 # Temp files
 _mcp_*.json
