@@ -1,8 +1,9 @@
 """Archicad sync routes — instance discovery, preview counts, and full refresh."""
 
+import json as _json
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 
 archicad_bp = Blueprint('archicad', __name__)
 
@@ -66,7 +67,13 @@ def preview_archicad(project_id):
 
 @archicad_bp.route('/api/projects/<project_id>/refresh', methods=['POST'])
 def refresh_archicad(project_id):
-    """Full Archicad pull — extract data, write to Excel, update project."""
+    """Full Archicad pull — extract data, write to Excel, update project.
+
+    Streams progress as newline-delimited JSON. Each line is either:
+      {"progress": {"step": 3, "total": 16, "category": "Countertops"}}
+    or the final result:
+      {"result": {...}}
+    """
     load_projects, save_projects = _get_helpers()
     projects = load_projects()
     project = next((p for p in projects if p['id'] == project_id), None)
@@ -80,39 +87,77 @@ def refresh_archicad(project_id):
     data = request.get_json(silent=True) or {}
     port = data.get('port') or request.args.get('port', type=int)
 
-    try:
-        from services.tapir import full_extract
-        result = full_extract(port=port)
-    except ConnectionError as e:
-        return jsonify({'error': str(e)}), 503
-    except Exception as e:
-        return jsonify({'error': f'Archicad extraction failed: {e}'}), 500
+    def generate():
+        import threading
+        import time
 
-    # Write to Excel
-    excel_error = None
-    try:
-        from services.excel_writer import write_to_master
-        write_to_master(folder, result['schedules'], result['schedule_defs'])
-    except FileNotFoundError as e:
-        excel_error = str(e)
-    except Exception as e:
-        excel_error = f'Excel write failed: {e}'
+        # Extract from Archicad
+        try:
+            from services.tapir import full_extract
+            result = full_extract(port=port)
+        except ConnectionError as e:
+            yield _json.dumps({'error': str(e)}) + '\n'
+            return
+        except Exception as e:
+            yield _json.dumps({'error': f'Archicad extraction failed: {e}'}) + '\n'
+            return
 
-    # Update project counts and timestamp (1:1 mapping)
-    dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
-    for sid, count in result.get('counts', {}).items():
-        if sid in dashboard_counts:
-            dashboard_counts[sid] = count
+        # Write to Excel in a thread, streaming progress via shared list
+        progress_events = []
+        write_error = [None]
 
-    project['schedules'] = dashboard_counts
-    project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
-    save_projects(projects)
+        def _progress_cb(step, total, category_name):
+            progress_events.append({
+                'progress': {'step': step, 'total': total, 'category': category_name}
+            })
 
-    response = {
-        'project': project,
-        'total': result.get('total', 0),
-    }
-    if excel_error:
-        response['excel_error'] = excel_error
+        def _do_write():
+            try:
+                from services.excel_writer import write_to_master
+                write_to_master(
+                    folder, result['schedules'], result['schedule_defs'],
+                    on_progress=_progress_cb,
+                )
+            except FileNotFoundError as e:
+                write_error[0] = str(e)
+            except Exception as e:
+                write_error[0] = f'Excel write failed: {e}'
 
-    return jsonify(response)
+        t = threading.Thread(target=_do_write)
+        t.start()
+
+        # Poll and yield progress events while writer runs
+        last_sent = 0
+        while t.is_alive():
+            while last_sent < len(progress_events):
+                yield _json.dumps(progress_events[last_sent]) + '\n'
+                last_sent += 1
+            time.sleep(0.1)
+
+        # Flush remaining progress events
+        while last_sent < len(progress_events):
+            yield _json.dumps(progress_events[last_sent]) + '\n'
+            last_sent += 1
+
+        # Update project counts and timestamp
+        dashboard_counts = {k: 0 for k in project.get('schedules', {}).keys()}
+        for sid, count in result.get('counts', {}).items():
+            if sid in dashboard_counts:
+                dashboard_counts[sid] = count
+
+        project['schedules'] = dashboard_counts
+        project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
+        save_projects(projects)
+
+        response = {
+            'result': {
+                'project': project,
+                'total': result.get('total', 0),
+            }
+        }
+        if write_error[0]:
+            response['result']['excel_error'] = write_error[0]
+
+        yield _json.dumps(response) + '\n'
+
+    return Response(generate(), mimetype='application/x-ndjson')

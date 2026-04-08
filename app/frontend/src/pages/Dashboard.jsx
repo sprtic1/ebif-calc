@@ -34,6 +34,7 @@ function Dashboard() {
   const [selectedPort, setSelectedPort] = useState(null)
   const [preview, setPreview] = useState(null)
   const [writing, setWriting] = useState(false)
+  const [writeProgress, setWriteProgress] = useState(null)
   const [retryTimer, setRetryTimer] = useState(null)
 
   const fetchProject = () => {
@@ -129,28 +130,66 @@ function Dashboard() {
   const handleConfirmRefresh = async () => {
     setWriting(true)
     setSyncError('')
+    setWriteProgress(null)
     try {
       const res = await fetch(`/api/projects/${id}/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port: selectedPort }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setSyncError(data.error || 'Refresh failed')
-        setWriting(false)
-        return
+
+      // Read newline-delimited JSON stream for progress updates
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let finalResult = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() // keep incomplete line in buffer
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const msg = JSON.parse(line)
+            if (msg.error) {
+              setSyncError(msg.error)
+              setWriting(false)
+              setWriteProgress(null)
+              return
+            }
+            if (msg.progress) {
+              setWriteProgress(msg.progress)
+            }
+            if (msg.result) {
+              finalResult = msg.result
+            }
+          } catch {
+            // skip malformed lines
+          }
+        }
       }
-      setProject(data.project)
-      setPreview(null)
-      setSelectedPort(null)
-      setWriting(false)
-      if (data.excel_error) {
-        setSyncError(`Data synced but Excel write failed: ${data.excel_error}`)
+
+      if (finalResult) {
+        setProject(finalResult.project)
+        setPreview(null)
+        setSelectedPort(null)
+        setWriteProgress(null)
+        setWriting(false)
+        if (finalResult.excel_error) {
+          setSyncError(`Data synced but Excel write failed: ${finalResult.excel_error}`)
+        }
+      } else {
+        setSyncError('Refresh completed but no result received')
+        setWriting(false)
+        setWriteProgress(null)
       }
     } catch {
       setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
       setWriting(false)
+      setWriteProgress(null)
     }
   }
 
@@ -260,16 +299,42 @@ function Dashboard() {
             <p className="text-xs text-warm-gray mb-4">
               This will write Archicad data into the EID Master Schedule. Manual columns will NOT be touched.
             </p>
+            {/* Progress bar during write */}
+            {writing && writeProgress && (
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-heading text-olive">
+                    Writing {writeProgress.category}...
+                  </span>
+                  <span className="text-sm font-heading text-warm-gray">
+                    {writeProgress.step} of {writeProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-olive h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${(writeProgress.step / writeProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {writing && !writeProgress && (
+              <div className="mb-4">
+                <p className="text-sm font-heading text-olive">Extracting data from Archicad...</p>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={handleConfirmRefresh}
                 disabled={writing}
                 className="flex-1 bg-olive text-white font-heading font-bold py-3 rounded-lg hover:bg-warm-gray transition disabled:opacity-50"
               >
-                {writing ? 'Writing to Excel...' : 'Confirm & Write'}
+                {writing ? (writeProgress ? `Writing... ${writeProgress.step}/${writeProgress.total}` : 'Extracting...') : 'Confirm & Write'}
               </button>
               <button
-                onClick={() => { setPreview(null); setSelectedPort(null) }}
+                onClick={() => { setPreview(null); setSelectedPort(null); setWriteProgress(null) }}
                 disabled={writing}
                 className="flex-1 bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
               >

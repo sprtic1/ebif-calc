@@ -42,6 +42,7 @@ def write_to_master(
     project_folder,
     schedules,
     schedule_defs,
+    on_progress=None,
 ):
     """Write Archicad data into the project's EID Master Schedule.xlsm.
 
@@ -49,6 +50,7 @@ def write_to_master(
         project_folder: Full path to the project folder
         schedules: dict mapping schedule_id -> list of row dicts
         schedule_defs: list of schedule definition dicts (with resolved column info)
+        on_progress: Optional callback(step, total, schedule_name) called after each category
 
     Returns:
         dict mapping schedule_id -> number of rows written
@@ -60,6 +62,7 @@ def write_to_master(
 
     wb = load_workbook(xlsm_path, keep_vba=True)
     result = {}
+    total_steps = len(schedule_defs)
 
     # Build a lookup from schedule name -> schedule def
     sdef_by_name = {}
@@ -68,10 +71,13 @@ def write_to_master(
         sdef_by_name[sdef['name']] = sdef
         sdef_by_id[sdef['id']] = sdef
 
-    for sdef in schedule_defs:
+    for step, sdef in enumerate(schedule_defs, start=1):
         sid = sdef['id']
         sname = sdef['name']
         rows = schedules.get(sid, [])
+
+        if on_progress:
+            on_progress(step, total_steps, sname)
 
         if not rows:
             result[sid] = 0
