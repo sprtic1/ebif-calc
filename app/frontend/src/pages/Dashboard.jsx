@@ -188,6 +188,10 @@ function Dashboard() {
           >
             {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
           </button>
+          <p className="text-xs text-warm-gray mt-2 text-right">
+            Updates the Excel schedule from the live Archicad model.<br />
+            The project must be open in Archicad with the Tapir palette running.
+          </p>
         </div>
       </div>
 
