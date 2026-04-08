@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+app/frontend/node_modules/
+app/frontend/dist/
+
+# Temp pipeline files
+_mcp_tmp_*.json
+_mcp_start_time
+_mcp_walls.json
+_mcp_writeback.json
+
+# Output files (generated each run)
+renco_data_*.json
+renco_schedule_*.xlsx
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude internal
+.claude/

@@ -1,0 +1,58 @@
+{
+  "containers": [
+    {
+      "id": "20ST",
+      "name": "20ft Standard",
+      "interior_length_in": 232,
+      "interior_width_in": 92,
+      "interior_height_in": 90,
+      "max_payload_lbs": 47900,
+      "pallets_per_layer": 10,
+      "max_layers": 2,
+      "max_pallets": 20
+    },
+    {
+      "id": "20HC",
+      "name": "20ft High Cube",
+      "interior_length_in": 232,
+      "interior_width_in": 92,
+      "interior_height_in": 102,
+      "max_payload_lbs": 47070,
+      "pallets_per_layer": 10,
+      "max_layers": 2,
+      "max_pallets": 20
+    },
+    {
+      "id": "40ST",
+      "name": "40ft Standard",
+      "interior_length_in": 473,
+      "interior_width_in": 93,
+      "interior_height_in": 90,
+      "max_payload_lbs": 58935,
+      "pallets_per_layer": 22,
+      "max_layers": 2,
+      "max_pallets": 44
+    },
+    {
+      "id": "40HC",
+      "name": "40ft High Cube",
+      "interior_length_in": 473,
+      "interior_width_in": 93,
+      "interior_height_in": 102,
+      "max_payload_lbs": 58135,
+      "pallets_per_layer": 22,
+      "max_layers": 2,
+      "max_pallets": 44
+    }
+  ],
+  "default_container": "40ST",
+  "pallet": {
+    "length_in": 48,
+    "width_in": 40,
+    "height_empty_in": 4.75,
+    "weight_lbs": 37,
+    "max_load_lbs": 4600,
+    "blocks_per_pallet": 40,
+    "note": "Standard GMA pallet. Blocks per pallet TBC from Renco."
+  }
+}

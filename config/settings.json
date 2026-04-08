@@ -1,0 +1,48 @@
+{
+  "archicad": {
+    "host": "localhost",
+    "port": 19723,
+    "timeout_seconds": 15
+  },
+  "filter": {
+    "composite_name_contains": "renco",
+    "case_sensitive": false
+  },
+  "calculation": {
+    "bond_pattern": "running",
+    "waste_factor_percent": 0,
+    "modular_tolerance_inches": 0.1
+  },
+  "pallet": {
+    "loaded_height_in": 48,
+    "loaded_height_confirmed": false,
+    "note": "Estimated loaded pallet height per layer. TBC from Renco."
+  },
+  "consumables": {
+    "adhesive_linear_ft_per_cartridge": 100,
+    "adhesive_confirmed": false,
+    "adhesive_note": "Coverage rate TBC from Renco. Default 100 LF/cartridge estimated.",
+    "crew_size": 4,
+    "mallets_per_crew": 1
+  },
+  "archicad_writeback": {
+    "enabled": true,
+    "property_group": "EID GENERAL PROPERTIES",
+    "property_name": "RENCO REPORT",
+    "element_id_guid": "7e221f33-829b-4fbc-a670-e74dabce6289",
+    "clear_on_run": true
+  },
+  "paths": {
+    "website_repo": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\CLAUDE\\CLAUDE CODE\\RENCO-WEBSITE\\renco-calc",
+    "project_renders": "C:\\Users\\linco\\EID Dropbox\\PROJECTS\\ELLIS BEACH CHALET",
+    "excel_output": ""
+  },
+  "project": {
+    "name": "Ellis Beach Chalet 29"
+  },
+  "output": {
+    "excel_filename_prefix": "renco_schedule",
+    "json_filename_prefix": "renco_data",
+    "include_excluded_sheet": false
+  }
+}
