@@ -42,24 +42,24 @@ def create_project():
     if not data:
         return jsonify({'error': 'Request body required'}), 400
 
-    name = data.get('name', '').strip()
-    client = data.get('client', '').strip()
-    number = data.get('number', '').strip()
-    dropbox_path = data.get('dropbox_path', '').strip()
+    folder_location = data.get('folder_location', '').strip()
+    project_name = data.get('project_name', '').strip()
+    client_name = data.get('client_name', '').strip()
+    address = data.get('address', '').strip()
 
-    if not name or not number:
-        return jsonify({'error': 'Project name and number are required'}), 400
+    if not project_name or not folder_location:
+        return jsonify({'error': 'Folder location and project name are required'}), 400
 
     project_id = str(uuid.uuid4())[:8]
-    slug = slugify(name)
+    slug = slugify(project_name)
 
     project = {
         'id': project_id,
         'slug': slug,
-        'name': name,
-        'client': client,
-        'number': number,
-        'dropbox_path': dropbox_path,
+        'project_name': project_name,
+        'client_name': client_name,
+        'address': address,
+        'folder_location': folder_location,
         'created_at': datetime.utcnow().isoformat() + 'Z',
         'last_synced': None,
         'schedules': {
@@ -87,7 +87,7 @@ def create_project():
 
     # Copy template file (non-fatal if template paths not configured)
     try:
-        template_path = copy_template(name, number)
+        template_path = copy_template(folder_location)
         project['template_path'] = template_path
     except Exception as e:
         project['template_path'] = None
@@ -120,7 +120,7 @@ def serve_frontend(path):
     index = os.path.join(dist_dir, 'index.html')
     if os.path.exists(index):
         return send_from_directory(dist_dir, 'index.html')
-    return jsonify({'message': 'EID Project Hub API running. Build frontend with: cd app/frontend && npm run build'}), 200
+    return jsonify({'message': 'EID Project Manager API running. Build frontend with: cd app/frontend && npm run build'}), 200
 
 
 if __name__ == '__main__':

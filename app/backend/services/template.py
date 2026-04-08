@@ -17,29 +17,28 @@ def slugify(text):
     return text
 
 
-def copy_template(project_name, project_number):
-    """Copy the TEMPLATE .xlsm file to the project folder.
+def copy_template(project_folder):
+    """Copy the EID Master Schedule template into the project folder.
 
-    Names it EID-{ProjectNumber}-{ProjectName}.xlsm
-    Returns the destination path.
+    The template source is defined in settings.json as a relative path
+    under dropbox_root. The copy goes to:
+        {project_folder}/EBIF/EXCEL/MASTER/EID Master Schedule.xlsm
+
+    Creates subfolders if they don't exist.
+    Returns the destination file path on success, or raises an error.
     """
     settings = load_settings()
-    templates_folder = settings['templates_folder']
-    projects_folder = settings['projects_folder']
-    template_filename = settings.get('template_filename', 'TEMPLATE.xlsm')
+    dropbox_root = settings['dropbox_root']
+    template_source = settings['template_source']
 
-    src = os.path.join(templates_folder, template_filename)
-    if not os.path.exists(src):
-        raise FileNotFoundError(f"Template not found: {src}")
+    source = os.path.join(dropbox_root, template_source)
+    if not os.path.exists(source):
+        raise FileNotFoundError(f"Template not found: {source}")
 
-    safe_name = re.sub(r'[^\w\s-]', '', project_name).strip()
-    dest_filename = f"EID-{project_number}-{safe_name}.xlsm"
+    dest_dir = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER')
+    os.makedirs(dest_dir, exist_ok=True)
 
-    slug = slugify(project_name)
-    project_dir = os.path.join(projects_folder, slug)
-    os.makedirs(project_dir, exist_ok=True)
-
-    dest = os.path.join(project_dir, dest_filename)
-    shutil.copy2(src, dest)
+    dest = os.path.join(dest_dir, 'EID Master Schedule.xlsm')
+    shutil.copy2(source, dest)
 
     return dest

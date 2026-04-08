@@ -9,7 +9,7 @@ function App() {
       <nav className="bg-olive text-white px-6 py-4 shadow-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link to="/" className="font-heading font-black text-2xl tracking-tight hover:opacity-90">
-            EID Project Hub
+            EID Project Manager
           </Link>
           <Link
             to="/new"

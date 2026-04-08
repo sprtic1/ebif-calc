@@ -63,9 +63,9 @@ function Dashboard() {
           <Link to="/" className="text-olive hover:underline text-sm font-heading mb-1 inline-block">
             &larr; All Projects
           </Link>
-          <h2 className="font-heading text-2xl font-bold text-olive">{project.name}</h2>
-          {project.client && <p className="text-warm-gray">{project.client}</p>}
-          <p className="text-sm text-sage font-heading">#{project.number}</p>
+          <h2 className="font-heading text-2xl font-bold text-olive">{project.project_name}</h2>
+          {project.client_name && <p className="text-warm-gray">{project.client_name}</p>}
+          {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
         </div>
         <button
           onClick={fetchProject}

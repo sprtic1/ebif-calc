@@ -44,11 +44,13 @@ function Home() {
             to={`/project/${project.id}`}
             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition border-l-4 border-olive"
           >
-            <h3 className="font-heading font-bold text-lg text-olive mb-1">{project.name}</h3>
-            {project.client && (
-              <p className="text-warm-gray text-sm mb-2">{project.client}</p>
+            <h3 className="font-heading font-bold text-lg text-olive mb-1">{project.project_name}</h3>
+            {project.client_name && (
+              <p className="text-warm-gray text-sm mb-2">{project.client_name}</p>
             )}
-            <p className="text-sm text-sage font-heading">#{project.number}</p>
+            {project.address && (
+              <p className="text-sm text-sage font-heading">{project.address}</p>
+            )}
             <div className="mt-4 flex items-center justify-between text-xs text-warm-gray">
               <span>
                 {project.last_synced
