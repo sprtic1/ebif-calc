@@ -9,8 +9,12 @@ import json
 import logging
 import os
 import sys
+import signal
 
 logger = logging.getLogger(__name__)
+
+TAPIR_TIMEOUT = 60  # seconds — applies to connect, preview, and refresh
+TAPIR_ERROR_MSG = "Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again."
 
 # Add project root to sys.path so we can import ebif/ modules
 _PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -101,20 +105,45 @@ def scan_instances():
 
 
 def connect(port=None):
-    """Connect to Archicad via Tapir. Raises ConnectionError on failure."""
+    """Connect to Archicad via Tapir. Raises ConnectionError on failure.
+
+    Uses TAPIR_TIMEOUT (60s) for per-request timeout.
+    """
     if port is None:
         port = get_port()
     # Set env var for modules that read it directly
     os.environ['_EBIF_AC_PORT'] = str(port)
     try:
-        conn = ArchicadConnection(port=port)
+        conn = ArchicadConnection(port=port, timeout=TAPIR_TIMEOUT)
         return conn
     except ConnectionError:
         raise
     except Exception as e:
-        raise ConnectionError(
-            f"Cannot connect to Archicad on port {port} — is it running with Tapir?"
-        ) from e
+        raise ConnectionError(TAPIR_ERROR_MSG) from e
+
+
+def _run_with_timeout(fn, timeout=TAPIR_TIMEOUT):
+    """Run fn() in a thread with an overall timeout. Raises ConnectionError on timeout."""
+    import threading
+
+    result = [None]
+    error = [None]
+
+    def _worker():
+        try:
+            result[0] = fn()
+        except Exception as e:
+            error[0] = e
+
+    t = threading.Thread(target=_worker)
+    t.start()
+    t.join(timeout=timeout)
+
+    if t.is_alive():
+        raise ConnectionError(TAPIR_ERROR_MSG)
+    if error[0] is not None:
+        raise error[0]
+    return result[0]
 
 
 def preview_counts(port=None):
@@ -125,7 +154,14 @@ def preview_counts(port=None):
             counts: {schedule_id: int}
             schedules: [{id, name, count}]
             total: int
+
+    Raises ConnectionError if the operation exceeds 60 seconds.
     """
+    return _run_with_timeout(lambda: _preview_counts_inner(port))
+
+
+def _preview_counts_inner(port=None):
+    """Inner implementation of preview_counts (runs inside timeout wrapper)."""
     conn = connect(port)
     schedule_defs = _load_schedule_defs()
     p = conn.base_url.split(':')[-1]
@@ -207,7 +243,14 @@ def full_extract(port=None):
             schedule_defs: list of schedule defs (with resolved GUIDs)
             counts: {schedule_id: int}
             total: int
+
+    Raises ConnectionError if the operation exceeds 60 seconds.
     """
+    return _run_with_timeout(lambda: _full_extract_inner(port))
+
+
+def _full_extract_inner(port=None):
+    """Inner implementation of full_extract (runs inside timeout wrapper)."""
     conn = connect(port)
     schedule_defs = _load_schedule_defs()
     p = conn.base_url.split(':')[-1]

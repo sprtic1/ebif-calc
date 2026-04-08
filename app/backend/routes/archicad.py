@@ -25,7 +25,7 @@ def list_instances():
     if not instances:
         return jsonify({
             'instances': [],
-            'error': 'Cannot connect to Archicad \u2014 is it running with Tapir?',
+            'error': 'Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.',
         })
 
     return jsonify({'instances': instances})

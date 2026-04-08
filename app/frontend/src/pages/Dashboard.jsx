@@ -67,7 +67,7 @@ function Dashboard() {
       const data = await res.json()
 
       if (!data.instances || data.instances.length === 0) {
-        setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+        setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
         setSyncing(false)
         return
       }
@@ -81,7 +81,7 @@ function Dashboard() {
         setSyncing(false)
       }
     } catch {
-      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+      setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
       setSyncing(false)
     }
   }
@@ -105,7 +105,7 @@ function Dashboard() {
       setPreview(data)
       setSyncing(false)
     } catch {
-      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+      setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
       setSyncing(false)
     }
   }
@@ -133,7 +133,7 @@ function Dashboard() {
         setSyncError(`Data synced but Excel write failed: ${data.excel_error}`)
       }
     } catch {
-      setSyncError('Cannot connect to Archicad \u2014 is it running with Tapir?')
+      setSyncError('Cannot connect to Archicad. Please open the Tapir palette in your Archicad project and try again.')
       setWriting(false)
     }
   }
