@@ -219,47 +219,57 @@ def _resolve_column_defs(
         builtin_cache[nonloc_name] = ""
         return ""
 
+    # New format: schedules have {archicad: [...], manual: [...]}
+    default_archicad = col_config.get("_default_archicad_columns", [])
+    default_manual = col_config.get("_default_manual_columns", [])
+
+    def _resolve_col(col, sched_group_props, general_props_):
+        label = col["label"]
+        source = col["source"]
+        if source.startswith("builtin:"):
+            return label, resolve_builtin(source[len("builtin:"):])
+        elif source.startswith("user:"):
+            prop_name = source[len("user:"):]
+            guid = sched_group_props.get(prop_name, "") or general_props_.get(prop_name, "") or user_flat.get(prop_name, "")
+            return label, guid
+        elif source.startswith("classification:"):
+            return label, f"_classification:{source[len('classification:'):]}"
+        elif source.startswith("literal:"):
+            return label, f"_literal:{source[len('literal:'):]}"
+        return label, ""
+
     for sdef in schedule_defs:
         sid = sdef["id"]
-        col_def = sched_cols.get(sid, default_cols)
-        if isinstance(col_def, str) and col_def == "_default_columns":
-            col_def = default_cols
+        sched_entry = sched_cols.get(sid, {"archicad": "_default", "manual": "_default"})
 
-        if not col_def:
-            continue
+        # Handle old format (list or string) gracefully
+        if isinstance(sched_entry, (list, str)):
+            sched_entry = {"archicad": "_default", "manual": "_default"}
 
-        # Resolve each column to a GUID
+        # Resolve archicad columns
+        ac_cols = sched_entry.get("archicad", "_default")
+        if ac_cols == "_default":
+            ac_cols = default_archicad
+        # Resolve manual columns
+        man_cols = sched_entry.get("manual", "_default")
+        if man_cols == "_default":
+            man_cols = default_manual
+
+        all_col_defs = ac_cols + man_cols
         resolved: dict[str, str] = {}
         sched_norm_group = _normalize_group(sdef.get("group", ""))
         sched_group_props = group_props.get(sched_norm_group, {})
         general_props = group_props.get("GENERAL PROPERTIES", {})
 
-        for col in col_def:
-            label = col["label"]
-            source = col["source"]
+        for col in all_col_defs:
+            label, guid = _resolve_col(col, sched_group_props, general_props)
+            resolved[label] = guid
 
-            if source.startswith("builtin:"):
-                nonloc = source[len("builtin:"):]
-                resolved[label] = resolve_builtin(nonloc)
-            elif source.startswith("user:"):
-                prop_name = source[len("user:"):]
-                guid = sched_group_props.get(prop_name, "")
-                if not guid:
-                    guid = general_props.get(prop_name, "")
-                if not guid:
-                    guid = user_flat.get(prop_name, "")
-                resolved[label] = guid
-            elif source.startswith("classification:"):
-                # Classification columns are resolved at extraction time, not here
-                resolved[label] = f"_classification:{source[len('classification:'):]}"
-            elif source.startswith("literal:"):
-                resolved[label] = f"_literal:{source[len('literal:'):]}"
-            else:
-                resolved[label] = ""
-
-        sdef["_column_defs"] = col_def
+        sdef["_column_defs"] = all_col_defs
         sdef["_resolved_col_guids"] = resolved
-        sdef["columns"] = [c["label"] for c in col_def]
+        sdef["_archicad_col_labels"] = [c["label"] for c in ac_cols]
+        sdef["_manual_col_labels"] = [c["label"] for c in man_cols]
+        sdef["columns"] = [c["label"] for c in all_col_defs]
 
-        matched = sum(1 for v in resolved.values() if v)
-        logger.debug("Schedule '%s': %d/%d columns resolved", sdef["name"], matched, len(col_def))
+        matched = sum(1 for v in resolved.values() if v and not v.startswith("_"))
+        logger.debug("Schedule '%s': %d/%d columns resolved", sdef["name"], matched, len(all_col_defs))

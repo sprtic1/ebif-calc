@@ -97,9 +97,17 @@ def extract_schedule(
     classification_cols = {}  # label -> system name
     literal_cols = {}  # label -> literal value
 
+    # Always fetch EBIF UID, Element ID, and TEAR SHEET # (locked columns)
     if ebif_uid_guid:
         prop_guids.append(ebif_uid_guid)
         prop_labels.append("EBIF UID")
+    prop_guids.append(P_ELEMENT_ID)
+    prop_labels.append("Element ID")
+    # TEAR SHEET # from the schedule's EBIF group
+    ts_guid = schedule_def.get("properties", {}).get("TEAR SHEET #", "")
+    if ts_guid:
+        prop_guids.append(ts_guid)
+        prop_labels.append("TEAR SHEET #")
 
     for col in col_defs:
         label = col["label"]

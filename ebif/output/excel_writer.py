@@ -134,12 +134,15 @@ def write_schedule_file(
         name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
 
     # Data table starts at row 5
-    # EBIF UID is always first. Remaining columns come from schedule_columns.json.
+    # Layout: EBIF UID + Element ID + TEAR SHEET # (locked) | Archicad columns (locked) | Manual columns (editable)
+    archicad_labels = set(schedule_def.get("_archicad_col_labels", []))
+    manual_labels = set(schedule_def.get("_manual_col_labels", []))
     sched_columns = schedule_def.get("columns", [])
-    columns = ["EBIF UID"] + [c for c in sched_columns if c != "EBIF UID"] + ["Qty"]
+    columns = ["EBIF UID", "Element ID", "TEAR SHEET #"] + [c for c in sched_columns if c not in ("EBIF UID", "Element ID", "TEAR SHEET #")]
+    locked_cols = {"EBIF UID", "Element ID", "TEAR SHEET #"} | archicad_labels
     _write_header_row(ws, 5, columns)
 
-    # Write data — locked columns get gray background, unlocked columns are editable
+    # Write data — locked columns gray, manual columns white/editable
     for i, data_row in enumerate(rows):
         row_num = 6 + i
         for col_idx, col_name in enumerate(columns, start=1):
@@ -151,7 +154,7 @@ def write_schedule_file(
             cell.border = THIN_BORDER
             cell.alignment = Alignment(vertical="center", wrap_text=True)
 
-            if col_name in LOCKED_COLUMNS:
+            if col_name in locked_cols:
                 cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
                 cell.protection = LOCKED
             else:

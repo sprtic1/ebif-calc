@@ -1,9 +1,7 @@
 {
-  "note": "Column definitions for Excel output. EBIF UID is always prepended automatically. Source types: builtin:PropertyName (Archicad built-in), user:PropertyName (EBIF group or EID General), classification:SystemName (classification system).",
+  "note": "Column definitions for Excel output. Archicad columns are locked/gray. Manual columns are editable/white. EBIF UID, Element ID, TEAR SHEET # are always first (locked). Source types: builtin:, user:, classification:, literal:",
 
-  "_default_columns": [
-    {"label": "Quantity", "source": "literal:1"},
-    {"label": "TEAR SHEET #", "source": "user:TEAR SHEET #"},
+  "_default_archicad_columns": [
     {"label": "Location", "source": "builtin:IdAndCategories_RelatedZoneName"},
     {"label": "Element Type", "source": "builtin:General_Type"},
     {"label": "Library Part Name", "source": "builtin:IdAndCategories_LibraryPartName"},
@@ -16,36 +14,127 @@
     {"label": "Uniformat", "source": "classification:Uniformat"}
   ],
 
+  "_default_manual_columns": [
+    {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
+    {"label": "MODEL #", "source": "user:MODEL #"},
+    {"label": "SIZE", "source": "user:SIZE"},
+    {"label": "FINISH", "source": "user:FINISH"},
+    {"label": "COST", "source": "user:COST"},
+    {"label": "NOTES", "source": "user:NOTES"}
+  ],
+
   "schedules": {
-    "appliances": "_default_columns",
-    "bath_accessories": "_default_columns",
-    "cabinetry_hardware": "_default_columns",
-    "cabinetry_inserts": "_default_columns",
-    "cabinetry_style": "_default_columns",
-    "countertops": "_default_columns",
-    "covering_calc": [
-      {"label": "Quantity", "source": "literal:1"},
-      {"label": "Location", "source": "builtin:IdAndCategories_RelatedZoneName"},
-      {"label": "Element Type", "source": "builtin:General_Type"},
-      {"label": "Library Part Name", "source": "builtin:IdAndCategories_LibraryPartName"},
-      {"label": "Layer", "source": "builtin:ModelView_LayerName"},
-      {"label": "Area Per Box of Tile", "source": "user:Area Per Box of Tile"},
-      {"label": "Covering Waste %", "source": "user:Covering Waste Percentage"},
-      {"label": "Total Area incl Waste", "source": "user:Area of Total Covering including Waste"},
+    "appliances": {"archicad": "_default", "manual": "_default"},
+    "bath_accessories": {"archicad": "_default", "manual": "_default"},
+    "cabinetry_hardware": {"archicad": "_default", "manual": [
+      {"label": "TYPE", "source": "user:TYPE"},
+      {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
+      {"label": "MODEL #", "source": "user:MODEL #"},
+      {"label": "SIZE", "source": "user:SIZE"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "cabinetry_inserts": {"archicad": "_default", "manual": [
+      {"label": "NAME", "source": "user:NAME"},
+      {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
+      {"label": "MODEL #", "source": "user:MODEL #"},
+      {"label": "SIZE", "source": "user:SIZE"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "cabinetry_style": {"archicad": "_default", "manual": [
+      {"label": "STYLE", "source": "user:STYLE"},
+      {"label": "MATERIAL", "source": "user:MATERIAL"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "SAMPLE #", "source": "user:SAMPLE #"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "countertops": {"archicad": "_default", "manual": [
+      {"label": "MATERIAL", "source": "user:MATERIAL"},
+      {"label": "FINISH/COLOR", "source": "user:FINISH/COLOR"},
+      {"label": "EDGE DETAIL", "source": "user:EDGE DETAIL"},
+      {"label": "THICKNESS", "source": "user:THICKNESS"},
+      {"label": "SPLASH", "source": "user:SPLASH"},
+      {"label": "SOURCE", "source": "user:SOURCE"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "covering_calc": {"archicad": "_default", "manual": [
+      {"label": "Area Per Box", "source": "user:Area Per Box of Tile"},
+      {"label": "Waste %", "source": "user:Covering Waste Percentage"},
+      {"label": "Total Area", "source": "user:Area of Total Covering including Waste"},
       {"label": "Cost/sqft", "source": "user:Cost per sqft of Covering"},
       {"label": "# Boxes", "source": "user:Number of Boxes of Tile"}
-    ],
-    "decorative_lighting": "_default_columns",
-    "door_hardware": "_default_columns",
-    "doors": "_default_columns",
-    "flooring": "_default_columns",
-    "furniture": "_default_columns",
-    "lighting_electrical": "_default_columns",
-    "plumbing": "_default_columns",
-    "shower_glass_mirrors": "_default_columns",
-    "specialty_equipment": "_default_columns",
-    "surface_finishes": "_default_columns",
-    "tile": "_default_columns",
-    "windows": "_default_columns"
+    ]},
+    "decorative_lighting": {"archicad": "_default", "manual": [
+      {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
+      {"label": "MODEL #", "source": "user:MODEL #"},
+      {"label": "SIZE", "source": "user:SIZE"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "WATTAGE", "source": "user:WATTAGE"},
+      {"label": "J-BOX", "source": "user:J-BOX"},
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "door_hardware": {"archicad": "_default", "manual": [
+      {"label": "TYPE", "source": "user:TYPE"},
+      {"label": "STYLE", "source": "user:STYLE"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "DOOR FINISH", "source": "user:DOOR FINISH"},
+      {"label": "COST", "source": "user:COST"}
+    ]},
+    "doors": {"archicad": "_default", "manual": [
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "flooring": {"archicad": "_default", "manual": "_default"},
+    "furniture": {"archicad": "_default", "manual": [
+      {"label": "ITEM", "source": "user:ITEM"},
+      {"label": "MANUFACTURER", "source": "user:MANUFACTURER"},
+      {"label": "MODEL #", "source": "user:MODEL #"},
+      {"label": "SIZE", "source": "user:SIZE"},
+      {"label": "FINISH", "source": "user:FINISH"},
+      {"label": "STATUS", "source": "user:STATUS"},
+      {"label": "COST", "source": "user:COST"}
+    ]},
+    "lighting_electrical": {"archicad": "_default", "manual": "_default"},
+    "plumbing": {"archicad": "_default", "manual": "_default"},
+    "shower_glass_mirrors": {"archicad": "_default", "manual": [
+      {"label": "TYPE", "source": "user:TYPE"},
+      {"label": "STYLE", "source": "user:STYLE"},
+      {"label": "THICKNESS", "source": "user:THICKNESS"},
+      {"label": "HINGE TYPE", "source": "user:HINGE TYPE"},
+      {"label": "HINGE HARDWARE", "source": "user:HINGE HARDWARE"},
+      {"label": "HINGE FINISH", "source": "user:HINGE FINISH"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "specialty_equipment": {"archicad": "_default", "manual": [
+      {"label": "TYPE", "source": "user:TYPE"},
+      {"label": "STYLE", "source": "user:STYLE"},
+      {"label": "THICKNESS", "source": "user:THICKNESS"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "surface_finishes": {"archicad": "_default", "manual": [
+      {"label": "WALL", "source": "user:WALL"},
+      {"label": "WALL FINISH", "source": "user:WALL FINISH"},
+      {"label": "CEILING", "source": "user:CEILING"},
+      {"label": "CEILING FINISH", "source": "user:CEILING FINISH"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "tile": {"archicad": "_default", "manual": [
+      {"label": "MATERIAL", "source": "user:MATERIAL"},
+      {"label": "FINISH/COLOR", "source": "user:FINISH/COLOR"},
+      {"label": "SIZE", "source": "user:SIZE"},
+      {"label": "THICKNESS", "source": "user:THICKNESS"},
+      {"label": "GROUT", "source": "user:GROUT"},
+      {"label": "SOURCE", "source": "user:SOURCE"},
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]},
+    "windows": {"archicad": "_default", "manual": [
+      {"label": "COST", "source": "user:COST"},
+      {"label": "NOTES", "source": "user:NOTES"}
+    ]}
   }
 }
