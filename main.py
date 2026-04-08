@@ -12,6 +12,7 @@ Usage:
 
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -157,6 +158,7 @@ def step1_extract(offline: bool = False):
 
         conn = load_connection(settings)
         port = settings.get("archicad_port", 19723)
+        os.environ["_EBIF_AC_PORT"] = str(port)
 
         # Auto-discover property GUIDs for this project
         print("  Discovering property GUIDs...")

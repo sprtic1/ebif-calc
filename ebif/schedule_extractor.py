@@ -86,23 +86,22 @@ def extract_schedule(
         logger.info("Schedule '%s': 0 included (of %d checked)", sched_name, len(elements))
         return []
 
-    # Build property GUID list from schedule definition
-    prop_map = schedule_def.get("properties", {})
-    columns = schedule_def.get("columns", [])
-
-    # EBIF UID (primary key) + Element ID + all schedule-specific properties
-    # EBIF UID is auto-discovered at runtime — look it up from the resolved properties
+    # Build property GUID list from schedule_columns.json definition
+    col_defs = schedule_def.get("_column_defs", [])
+    resolved_guids = schedule_def.get("_resolved_col_guids", {})
     ebif_uid_guid = schedule_def.get("_ebif_uid_guid", "")
-    prop_guids = [P_ELEMENT_ID]
-    prop_names = ["Element ID"]
+
+    # Collect GUIDs to fetch: EBIF UID + all column GUIDs
+    prop_guids = []
+    prop_labels = []
     if ebif_uid_guid:
         prop_guids.append(ebif_uid_guid)
-        prop_names.append("EBIF UID")
-    for col_name in columns:
-        guid = prop_map.get(col_name)
+        prop_labels.append("EBIF UID")
+    for col in col_defs:
+        guid = resolved_guids.get(col["label"], "")
         if guid:
             prop_guids.append(guid)
-            prop_names.append(col_name)
+            prop_labels.append(col["label"])
 
     # Fetch all properties for included elements
     rows = conn.fetch_element_properties(included, prop_guids)
@@ -115,13 +114,12 @@ def extract_schedule(
             "_guid": row["_guid"],
             "_type": row.get("_type", ""),
             "EBIF UID": ebif_uid if ebif_uid else row["_guid"],
-            "Element ID": row.get(P_ELEMENT_ID, ""),
         }
-        for name, guid in zip(prop_names[1:], prop_guids[1:]):
-            if name in ("Element ID", "EBIF UID"):
-                continue  # already added above
+        for label, guid in zip(prop_labels, prop_guids):
+            if label == "EBIF UID":
+                continue
             val = row.get(guid, "")
-            entry[name] = val if val is not None else ""
+            entry[label] = val if val is not None else ""
         # Qty defaults to 1 per element
         entry["Qty"] = 1
         result.append(entry)

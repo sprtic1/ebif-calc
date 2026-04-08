@@ -134,8 +134,9 @@ def write_schedule_file(
         name="Arial Narrow", color=WARM_GRAY, size=9, italic=True)
 
     # Data table starts at row 5
-    # EBIF UID is the primary key (first column)
-    columns = ["EBIF UID", "Element ID"] + schedule_def.get("columns", []) + ["Qty"]
+    # EBIF UID is always first. Remaining columns come from schedule_columns.json.
+    sched_columns = schedule_def.get("columns", [])
+    columns = ["EBIF UID"] + [c for c in sched_columns if c != "EBIF UID"] + ["Qty"]
     _write_header_row(ws, 5, columns)
 
     # Write data — locked columns get gray background, unlocked columns are editable
