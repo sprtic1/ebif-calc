@@ -48,57 +48,90 @@ def get_port():
     return settings.get('tapir_port', 19724)
 
 
+def _probe_port(port):
+    """Probe a single port for a running Archicad/Tapir instance.
+
+    Returns {port, project_name, version} or None.
+    """
+    import requests as _requests
+
+    try:
+        url = f"http://localhost:{port}"
+        r = _requests.post(url, json={"command": "API.GetProductInfo"}, timeout=2)
+        data = r.json()
+        if not data.get("succeeded", True):
+            return None
+        # Get project name via Tapir
+        project_name = ""
+        try:
+            pr = _requests.post(url, json={
+                "command": "API.ExecuteAddOnCommand",
+                "parameters": {
+                    "addOnCommandId": {
+                        "commandNamespace": "TapirCommand",
+                        "commandName": "GetProjectInfo"
+                    },
+                    "addOnCommandParameters": {}
+                }
+            }, timeout=2)
+            pd = pr.json()
+            resp = pd.get("result", {}).get("addOnCommandResponse", {})
+            project_name = resp.get("projectName", resp.get("projectPath", ""))
+            # Strip path, keep just filename without extension
+            if project_name and ("/" in project_name or "\\" in project_name):
+                project_name = project_name.replace("\\", "/").split("/")[-1]
+            if project_name.endswith(".pln"):
+                project_name = project_name[:-4]
+        except Exception:
+            project_name = f"Archicad (port {port})"
+        ver = data.get("result", {}).get("version", "?")
+        return {"port": port, "project_name": project_name or f"Archicad {ver}", "version": ver}
+    except Exception:
+        return None
+
+
 def scan_instances():
     """Scan ports 19720-19734 for running Archicad instances.
 
-    Returns list of {port, project_name} for each responding instance.
+    First does a fast sequential scan — if exactly one instance is found
+    on the first responding port, returns immediately without scanning
+    the rest. Otherwise scans all remaining ports in parallel with
+    2-second timeouts to find every instance.
+
+    Returns list of {port, project_name, version} sorted by port.
     """
     import concurrent.futures
-    import requests as _requests
 
-    def _probe(port):
-        try:
-            url = f"http://localhost:{port}"
-            r = _requests.post(url, json={"command": "API.GetProductInfo"}, timeout=2)
-            data = r.json()
-            if not data.get("succeeded", True):
-                return None
-            # Get project name via Tapir
-            project_name = ""
-            try:
-                pr = _requests.post(url, json={
-                    "command": "API.ExecuteAddOnCommand",
-                    "parameters": {
-                        "addOnCommandId": {
-                            "commandNamespace": "TapirCommand",
-                            "commandName": "GetProjectInfo"
-                        },
-                        "addOnCommandParameters": {}
-                    }
-                }, timeout=5)
-                pd = pr.json()
-                resp = pd.get("result", {}).get("addOnCommandResponse", {})
-                project_name = resp.get("projectName", resp.get("projectPath", ""))
-                # Strip path, keep just filename without extension
-                if project_name and ("/" in project_name or "\\" in project_name):
-                    project_name = project_name.replace("\\", "/").split("/")[-1]
-                if project_name.endswith(".pln"):
-                    project_name = project_name[:-4]
-            except Exception:
-                project_name = f"Archicad (port {port})"
-            ver = data.get("result", {}).get("version", "?")
-            return {"port": port, "project_name": project_name or f"Archicad {ver}", "version": ver}
-        except Exception:
-            return None
+    # Fast path: scan sequentially, stop early if we find one and
+    # the next few ports are dead (likely only one instance running)
+    first_hit = None
+    first_hit_port = None
+    for port in PORT_RANGE:
+        result = _probe_port(port)
+        if result:
+            first_hit = result
+            first_hit_port = port
+            break
 
-    instances = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as pool:
-        futures = {pool.submit(_probe, p): p for p in PORT_RANGE}
+    if first_hit is None:
+        return []
+
+    # Found one — scan remaining ports in parallel to check for more
+    remaining_ports = [p for p in PORT_RANGE if p != first_hit_port]
+    more = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(remaining_ports)) as pool:
+        futures = {pool.submit(_probe_port, p): p for p in remaining_ports}
         for f in concurrent.futures.as_completed(futures):
             result = f.result()
             if result:
-                instances.append(result)
+                more.append(result)
 
+    if not more:
+        # Only one instance — return immediately
+        return [first_hit]
+
+    # Multiple instances found
+    instances = [first_hit] + more
     instances.sort(key=lambda x: x["port"])
     return instances
 
