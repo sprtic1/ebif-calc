@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/projects/${id}`)
+    fetch(`/project-hub/api/projects/${id}`)
       .then(r => r.json())
       .then(data => { setProject(data); setLoading(false) })
       .catch(() => setLoading(false))
@@ -37,7 +37,7 @@ export default function Dashboard() {
           {project.project_name}
         </h1>
         <p className="text-eid-warm-gray mt-1">
-          {project.client_name} &middot; {project.project_number}
+          {project.client_name}{project.address ? ` \u00b7 ${project.address}` : ''}
         </p>
         <p className="text-xs text-eid-sage mt-2">
           Last synced: {project.last_synced || 'Never'}

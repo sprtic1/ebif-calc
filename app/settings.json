@@ -1,26 +1,10 @@
 {
-  "app": {
-    "host": "127.0.0.1",
-    "port": 5000,
-    "debug": true
-  },
-  "archicad": {
-    "host": "localhost",
-    "port": 19723,
-    "timeout_seconds": 15
-  },
-  "paths": {
-    "templates_folder": "C:\\Users\\linco\\EID Dropbox\\TEMPLATES",
-    "projects_folder": "C:\\Users\\linco\\EID Dropbox\\PROJECTS",
-    "website_repo": "C:\\Users\\linco\\EID Dropbox\\SOFTWARE\\CLAUDE\\CLAUDE CODE\\RENCO-WEBSITE\\renco-calc",
-    "project_renders": "",
-    "excel_output": ""
-  },
-  "api_keys": {
-    "archicad_api_key": "",
-    "github_token": ""
-  },
-  "project": {
-    "default_template": "EID-Master-Schedule-TEMPLATE.xlsm"
-  }
+  "tapir_port": 19724,
+  "dropbox_root": "C:/Users/linco/EID Dropbox",
+  "template_source": "PROJECTS/Z PROJECT TEMPLATE/EBIF/EXCEL/MASTER/EID Master Schedule.xlsm",
+  "projects_folder": "PROJECTS",
+  "excel_subpath": "EBIF/EXCEL/MASTER/EID Master Schedule.xlsm",
+  "clickup_api_token": "",
+  "clickup_workspace_id": "",
+  "app_port": 5050
 }

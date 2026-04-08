@@ -6,7 +6,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/projects')
+    fetch('/project-hub/api/projects')
       .then(r => r.json())
       .then(data => { setProjects(data); setLoading(false) })
       .catch(() => setLoading(false))
@@ -48,9 +48,11 @@ export default function Home() {
                 {p.project_name}
               </h2>
               <p className="text-eid-warm-gray text-sm mb-2">{p.client_name}</p>
-              <span className="inline-block bg-eid-light-sage text-eid-olive text-xs font-bold px-2 py-1 rounded">
-                {p.project_number}
-              </span>
+              {p.address && (
+                <span className="inline-block bg-eid-light-sage text-eid-olive text-xs font-bold px-2 py-1 rounded">
+                  {p.address}
+                </span>
+              )}
             </Link>
           ))}
         </div>

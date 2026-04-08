@@ -20,7 +20,7 @@ def list_projects():
 def new_project():
     data = request.get_json()
 
-    required = ['project_name', 'client_name', 'project_number', 'dropbox_folder']
+    required = ['project_name', 'client_name', 'folder_location']
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
@@ -31,7 +31,7 @@ def new_project():
     template_path = None
     template_error = None
     try:
-        template_path = copy_template(data['project_number'], data['project_name'])
+        template_path = copy_template(data['folder_location'])
     except Exception as e:
         template_error = str(e)
 
@@ -68,4 +68,4 @@ def serve_frontend(path):
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5050, debug=True)

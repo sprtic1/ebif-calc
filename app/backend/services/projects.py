@@ -40,8 +40,8 @@ def create_project(data):
         'id': str(uuid.uuid4()),
         'project_name': data['project_name'],
         'client_name': data['client_name'],
-        'project_number': data['project_number'],
-        'dropbox_folder': data['dropbox_folder'],
+        'address': data.get('address', ''),
+        'folder_location': data['folder_location'],
         'created_at': datetime.utcnow().isoformat() + 'Z',
         'last_synced': None,
         'categories': {

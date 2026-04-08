@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import NewProject from './pages/NewProject'
 import Dashboard from './pages/Dashboard'
@@ -6,9 +6,10 @@ import Dashboard from './pages/Dashboard'
 export default function App() {
   return (
     <div className="min-h-screen bg-eid-light-sage">
-      <header className="bg-eid-olive text-white px-6 py-4 shadow-md">
-        <a href="/" className="text-2xl font-heading font-bold tracking-wide">
-          EID Project Manager
+      <header className="bg-eid-olive text-white px-6 py-4 shadow-md flex items-center gap-4">
+        <a href="/project-hub/" className="flex items-center gap-3">
+          <img src="/project-hub/eid-logo.png" alt="Ellis Interior Design" className="h-10 w-auto" />
+          <span className="text-2xl font-heading font-bold tracking-wide">Project Manager</span>
         </a>
       </header>
       <main className="max-w-6xl mx-auto px-4 py-8">

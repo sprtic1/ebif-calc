@@ -11,29 +11,26 @@ def _load_settings():
         return json.load(f)
 
 
-def copy_template(project_number, project_name):
-    """Copy the EID master schedule template to the project's Dropbox folder.
+def copy_template(project_folder):
+    """Copy the EID master schedule template into the project folder.
 
-    Reads templates_folder and projects_folder from app/settings.json.
-    Names the copy EID-{ProjectNumber}-{ProjectName}.xlsm.
+    The template source is defined in settings.json as a relative path
+    under dropbox_root. The copy goes to:
+        {project_folder}/EBIF/EXCEL/MASTER/EID Master Schedule.xlsm
 
     Returns the destination file path on success, or raises an error.
     """
     settings = _load_settings()
-    templates_folder = settings['paths']['templates_folder']
-    projects_folder = settings['paths']['projects_folder']
-    template_filename = settings['project']['default_template']
+    dropbox_root = settings['dropbox_root']
+    template_source = settings['template_source']
+    excel_subpath = settings['excel_subpath']
 
-    source = os.path.join(templates_folder, template_filename)
+    source = os.path.join(dropbox_root, template_source)
     if not os.path.exists(source):
         raise FileNotFoundError(f"Template not found: {source}")
 
-    safe_name = project_name.replace(' ', '-').replace('/', '-').replace('\\', '-')
-    dest_filename = f"EID-{project_number}-{safe_name}.xlsm"
+    dest = os.path.join(project_folder, excel_subpath)
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
 
-    project_dir = os.path.join(projects_folder, f"{project_number}-{safe_name}")
-    os.makedirs(project_dir, exist_ok=True)
-
-    dest = os.path.join(project_dir, dest_filename)
     shutil.copy2(source, dest)
     return dest
