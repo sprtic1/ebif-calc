@@ -312,15 +312,15 @@ function Dashboard() {
             <p className="text-xs text-warm-gray mb-4">
               This will write Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
             </p>
-            {/* Progress bar during write */}
+            {/* Progress bar during extract/write */}
             {writing && writeProgress && (
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-heading text-olive">
-                    Writing {writeProgress.category}...
+                    {writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'} {writeProgress.category}...
                   </span>
                   <span className="text-sm font-heading text-warm-gray">
-                    {writeProgress.step} of {writeProgress.total}
+                    {writeProgress.step}/{writeProgress.total} ({Math.round((writeProgress.step / writeProgress.total) * 100)}%)
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
@@ -334,7 +334,7 @@ function Dashboard() {
 
             {writing && !writeProgress && (
               <div className="mb-4">
-                <p className="text-sm font-heading text-olive">Extracting data from Archicad...</p>
+                <p className="text-sm font-heading text-olive">Connecting to Archicad...</p>
               </div>
             )}
 
@@ -344,7 +344,11 @@ function Dashboard() {
                 disabled={writing}
                 className="flex-1 bg-olive text-white font-heading font-bold py-3 rounded-lg hover:bg-warm-gray transition disabled:opacity-50"
               >
-                {writing ? (writeProgress ? `Writing... ${writeProgress.step}/${writeProgress.total}` : 'Extracting...') : 'Confirm & Write'}
+                {writing
+                  ? (writeProgress
+                    ? `${writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'}... ${writeProgress.step}/${writeProgress.total} (${Math.round((writeProgress.step / writeProgress.total) * 100)}%)`
+                    : 'Connecting...')
+                  : 'Confirm & Write'}
               </button>
               <button
                 onClick={() => { setPreview(null); setSelectedPort(null); setWriteProgress(null) }}

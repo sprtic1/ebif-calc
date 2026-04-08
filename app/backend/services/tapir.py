@@ -220,11 +220,16 @@ def preview_counts(port=None):
     }
 
 
-def full_extract(port=None):
+def full_extract(port=None, on_progress=None):
     """Connect to Archicad, discover properties, extract all schedule data.
 
     The initial connection has a 60s timeout. Once connected, the data
     extraction runs without a timeout — it can take several minutes.
+
+    Args:
+        port: Tapir port to connect to (None = use settings.json)
+        on_progress: Optional callback(step, total, schedule_name) called
+                     after each schedule is extracted
 
     Returns:
         dict with keys:
@@ -242,8 +247,26 @@ def full_extract(port=None):
     all_props = discover_all_properties(port_int)
     schedule_defs = build_schedule_guid_map(all_props, schedule_defs)
 
-    # Extract all schedules
-    schedules = extract_all_schedules(conn, schedule_defs)
+    # Pre-cache elements by type (same as extract_all_schedules does internally)
+    all_types = set()
+    for sdef in schedule_defs:
+        all_types.update(sdef["element_types"])
+
+    cache = {}
+    for etype in sorted(all_types):
+        elems = conn.get_elements_by_type(etype)
+        for e in elems:
+            e["_type"] = etype
+        cache[etype] = elems
+
+    # Extract each schedule with progress
+    schedules = {}
+    total_defs = len(schedule_defs)
+    for step, sdef in enumerate(schedule_defs, start=1):
+        if on_progress:
+            on_progress(step, total_defs, sdef["name"])
+        rows = extract_schedule(conn, sdef, all_elements_cache=cache)
+        schedules[sdef["id"]] = rows
 
     counts = {sid: len(rows) for sid, rows in schedules.items()}
     total = sum(counts.values())

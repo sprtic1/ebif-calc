@@ -91,24 +91,57 @@ def refresh_archicad(project_id):
         import threading
         import time
 
-        # Extract from Archicad
-        try:
-            from services.tapir import full_extract
-            result = full_extract(port=port)
-        except ConnectionError as e:
-            yield _json.dumps({'error': str(e)}) + '\n'
-            return
-        except Exception as e:
-            yield _json.dumps({'error': f'Archicad extraction failed: {e}'}) + '\n'
+        progress_events = []
+
+        def _extract_progress(step, total, category_name):
+            progress_events.append({
+                'progress': {
+                    'phase': 'extracting', 'step': step, 'total': total,
+                    'category': category_name,
+                }
+            })
+
+        # Extract from Archicad in a thread so we can stream progress
+        extract_result = [None]
+        extract_error = [None]
+
+        def _do_extract():
+            try:
+                from services.tapir import full_extract
+                extract_result[0] = full_extract(port=port, on_progress=_extract_progress)
+            except ConnectionError as e:
+                extract_error[0] = str(e)
+            except Exception as e:
+                extract_error[0] = f'Archicad extraction failed: {e}'
+
+        t = threading.Thread(target=_do_extract)
+        t.start()
+
+        last_sent = 0
+        while t.is_alive():
+            while last_sent < len(progress_events):
+                yield _json.dumps(progress_events[last_sent]) + '\n'
+                last_sent += 1
+            time.sleep(0.1)
+        while last_sent < len(progress_events):
+            yield _json.dumps(progress_events[last_sent]) + '\n'
+            last_sent += 1
+
+        if extract_error[0]:
+            yield _json.dumps({'error': extract_error[0]}) + '\n'
             return
 
-        # Write to Excel in a thread, streaming progress via shared list
-        progress_events = []
+        result = extract_result[0]
+
+        # Write to Excel in a thread, streaming progress
         write_error = [None]
 
-        def _progress_cb(step, total, category_name):
+        def _write_progress(step, total, category_name):
             progress_events.append({
-                'progress': {'step': step, 'total': total, 'category': category_name}
+                'progress': {
+                    'phase': 'writing', 'step': step, 'total': total,
+                    'category': category_name,
+                }
             })
 
         def _do_write():
@@ -116,7 +149,7 @@ def refresh_archicad(project_id):
                 from services.excel_writer import write_to_master
                 write_to_master(
                     folder, result['schedules'], result['schedule_defs'],
-                    on_progress=_progress_cb,
+                    on_progress=_write_progress,
                 )
             except FileNotFoundError as e:
                 write_error[0] = str(e)
@@ -126,15 +159,11 @@ def refresh_archicad(project_id):
         t = threading.Thread(target=_do_write)
         t.start()
 
-        # Poll and yield progress events while writer runs
-        last_sent = 0
         while t.is_alive():
             while last_sent < len(progress_events):
                 yield _json.dumps(progress_events[last_sent]) + '\n'
                 last_sent += 1
             time.sleep(0.1)
-
-        # Flush remaining progress events
         while last_sent < len(progress_events):
             yield _json.dumps(progress_events[last_sent]) + '\n'
             last_sent += 1
