@@ -47,6 +47,11 @@ HEADER_FONT = Font(name="Lato", bold=True, color=WHITE, size=10)
 HEADER_FILL = PatternFill(start_color=OLIVE, end_color=OLIVE, fill_type="solid")
 LOCKED_FILL = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
 LOCKED_ALT_FILL = PatternFill(start_color="DCDCDC", end_color="DCDCDC", fill_type="solid")
+LIGHT_GRAY_FILL = PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid")
+
+# Column width: minimum 50 units for EBIF UID (col N), 15 units for others
+MIN_WIDTH_UID = 50
+MIN_WIDTH_DEFAULT = 15
 THIN_BORDER = Border(
     left=Side(style="thin", color="CCCCCC"),
     right=Side(style="thin", color="CCCCCC"),
@@ -180,6 +185,9 @@ def _write_schedule(wb, sdef, rows):
     # Remove Excel Table objects to prevent repair errors
     _remove_tables(ws)
 
+    # Remove legacy button objects (REFRESH APPLIANCES, etc.) from rows 1-3
+    _remove_legacy_buttons(ws)
+
     # Build reference labels
     archicad_labels = sdef.get('_archicad_col_labels', [])
     core_keys = {f[1] for f in CORE_FIELDS}
@@ -214,14 +222,17 @@ def _write_schedule(wb, sdef, rows):
             col = AC_START + 4 + j
             _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
 
-        # Formulas in A–D referencing N–Q
+        # Formulas in A–D referencing N–Q with consistent light gray background
         for dest_col, src_col in zip(FORMULA_COLS, FORMULA_SRC_COLS):
             src_letter = get_column_letter(src_col)
             cell = ws.cell(row=row_num, column=dest_col, value=f"={src_letter}{row_num}")
             cell.font = BODY_FONT
             cell.border = THIN_BORDER
             cell.alignment = Alignment(vertical="center", wrap_text=True)
-            cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
+            cell.fill = LIGHT_GRAY_FILL
+
+    # Auto-fit column widths for Archicad columns (N onward) — don't touch A-M
+    _autofit_archicad_columns(ws, all_headers, rows, ref_labels)
 
 
 def _check_file_lock(xlsm_path):
@@ -343,6 +354,61 @@ def _remove_tables(ws):
     if names:
         logger.info("Removed %d Excel Table(s) from '%s': %s",
                      len(names), ws.title, ', '.join(names))
+
+
+def _remove_legacy_buttons(ws):
+    """Remove legacy VBA button objects from rows 1-3.
+
+    These are REFRESH APPLIANCES / REFRESH ALL buttons from the old
+    Power Query system. They live in VML legacy drawings. Clearing
+    the legacy_drawing reference removes them from the sheet.
+    Also clears any cell content in rows 1-3 from column L onward
+    (old PQ-related formulas like #REF!).
+    """
+    if ws.legacy_drawing:
+        logger.info("Removed legacy drawing (buttons) from '%s'", ws.title)
+        ws.legacy_drawing = None
+
+    # Clear stray content in rows 1-3 from column L onward
+    max_col = ws.max_column or 1
+    for row in range(1, 4):
+        for col in range(12, max_col + 1):
+            cell = ws.cell(row=row, column=col)
+            if cell.value is not None:
+                cell.value = None
+
+
+def _autofit_archicad_columns(ws, all_headers, rows, ref_labels):
+    """Auto-fit column widths for Archicad data columns (N onward).
+
+    Does NOT change any column widths for columns A-M.
+    Column N (EBIF UID) gets a minimum width of 50 units (~350px).
+    Other columns auto-fit based on content with a minimum of 15 units.
+    """
+    for j, header in enumerate(all_headers):
+        col_idx = AC_START + j
+        col_letter = get_column_letter(col_idx)
+
+        # Calculate max content width: header + data
+        max_len = len(str(header))
+        for row_data in rows[:100]:  # sample first 100 rows for speed
+            key = header
+            # Map header display name back to data key
+            if j < 4:
+                key = CORE_FIELDS[j][1]
+            val = row_data.get(key, '')
+            if val is None:
+                val = ''
+            max_len = max(max_len, len(str(val)))
+
+        # Convert to width units (roughly 1 char = 1.1 units) + padding
+        width = max(max_len * 1.1 + 4, MIN_WIDTH_DEFAULT)
+
+        # Column N (EBIF UID) gets a minimum of 50 units
+        if j == 0:
+            width = max(width, MIN_WIDTH_UID)
+
+        ws.column_dimensions[col_letter].width = width
 
 
 def _find_sheet(wb, schedule_name):
