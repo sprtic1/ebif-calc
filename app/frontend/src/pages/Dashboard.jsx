@@ -383,10 +383,6 @@ function Dashboard() {
                 className="bg-warm-gray text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50">
                 {scanning ? 'Scanning...' : 'Scan Tear Sheets'}
               </button>
-              <button onClick={handleExportGC} disabled={exporting || syncing || writing}
-                className="bg-olive text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-warm-gray transition shadow text-sm disabled:opacity-50">
-                {exporting ? 'Exporting...' : 'Export'}
-              </button>
               <button type="button" onClick={handleOpenExcel} title="Open in Excel"
                 className="text-olive hover:text-warm-gray transition cursor-pointer px-4 py-2 rounded-lg hover:bg-gray-100">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
@@ -394,6 +390,14 @@ function Dashboard() {
                   <polyline points="14 2 14 8 20 8" />
                   <line x1="8" y1="13" x2="16" y2="13" />
                   <line x1="8" y1="17" x2="16" y2="17" />
+                </svg>
+              </button>
+              <button type="button" onClick={handleExportGC} disabled={exporting} title="Export GC Package"
+                className="text-olive hover:text-warm-gray transition cursor-pointer px-4 py-2 rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               </button>
             </div>
