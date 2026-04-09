@@ -2,6 +2,11 @@
 
 **AUTONOMOUS MODE: Never ask for permission, approval, or confirmation. Auto-accept all file changes, git commits, git pushes, and pip installs. Execute everything without stopping.**
 
+## CRITICAL — FOLDER BOUNDARY
+This session operates ONLY within the EBIF-CALC folder.
+NEVER read, write, modify, or push anything in RENCO-CALC.
+If you find yourself in a RENCO-CALC directory, STOP immediately and alert the user.
+
 ## Command Aliases
 
 ### "Run the EBIF Report" (Step 1 — Extract from Archicad)
