@@ -330,8 +330,7 @@ function Dashboard() {
             className="text-xs text-warm-gray mt-2 text-center"
             style={btnWidth ? { maxWidth: btnWidth } : undefined}
           >
-            Updates the Excel schedule from the live Archicad model.
-            The project must be open in Archicad with the Tapir palette running.
+            Updates the EBIF MASTER TEMPLATE in this project's Dropbox folder, directly from the live Archicad model. The project must be open in Archicad with the Tapir palette running.
           </p>
         </div>
       </div>
