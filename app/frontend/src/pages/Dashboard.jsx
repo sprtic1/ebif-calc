@@ -367,8 +367,8 @@ function Dashboard() {
               Last synced: {project.last_synced ? new Date(project.last_synced).toLocaleString() : 'Never'}
             </p>
           </div>
-          <div className="flex flex-col items-end flex-shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col flex-shrink-0">
+            <div className="flex items-center gap-2 justify-end">
               {syncing && syncStatus && (
                 <button onClick={cancelRetry} className="text-warm-gray font-heading font-bold px-4 py-2 rounded-lg hover:text-red-600 transition text-sm">
                   Cancel
