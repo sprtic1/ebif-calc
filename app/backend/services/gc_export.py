@@ -180,12 +180,12 @@ def generate_gc_package(project):
     if tabs_included == 0:
         raise ValueError("No schedule data found — nothing to export")
 
-    # Save GC file
+    # Save GC file to EBIF/EXCEL/EXPORT/
     folder = project.get('folder_location', '')
-    output_dir = os.path.join(folder, 'EBIF', 'EXCEL')
+    output_dir = os.path.join(folder, 'EBIF', 'EXCEL', 'EXPORT')
     os.makedirs(output_dir, exist_ok=True)
 
-    filename = f"{client_name} - GC PACKAGE.xlsx" if client_name else "GC PACKAGE.xlsx"
+    filename = f"{project_name} - GC PACKAGE.xlsx"
     output_path = os.path.join(output_dir, filename)
 
     gc_wb.save(output_path)
@@ -193,6 +193,7 @@ def generate_gc_package(project):
 
     return {
         'path': output_path,
+        'folder': output_dir,
         'filename': filename,
         'tabs': tabs_included,
         'rows': total_rows,

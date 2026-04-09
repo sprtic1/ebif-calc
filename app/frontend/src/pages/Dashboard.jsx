@@ -60,7 +60,6 @@ function Dashboard() {
 
   // Export state
   const [exporting, setExporting] = useState(false)
-  const [exportResult, setExportResult] = useState(null)
 
   // Archicad sync state
   const [syncing, setSyncing] = useState(false)
@@ -308,7 +307,6 @@ function Dashboard() {
   const handleExportGC = async () => {
     setExporting(true)
     setSyncError('')
-    setExportResult(null)
     try {
       const res = await fetch(`/api/projects/${id}/export-gc`, { method: 'POST' })
       const data = await res.json()
@@ -318,7 +316,6 @@ function Dashboard() {
         playErrorSound()
         return
       }
-      setExportResult(data)
       setExporting(false)
       setToast(`GC Package exported! ${data.tabs} tabs, ${data.rows} rows`)
       playSuccessSound()
@@ -327,16 +324,6 @@ function Dashboard() {
       setExporting(false)
       playErrorSound()
     }
-  }
-
-  const handleOpenFile = async (path) => {
-    try {
-      await fetch(`/api/projects/${id}/open-file`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
-      })
-    } catch { /* ignore */ }
   }
 
   const handleOpenExcel = async () => {
@@ -398,7 +385,7 @@ function Dashboard() {
               </button>
               <button onClick={handleExportGC} disabled={exporting || syncing || writing}
                 className="bg-olive text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-warm-gray transition shadow text-sm disabled:opacity-50">
-                {exporting ? 'Exporting...' : 'Export GC'}
+                {exporting ? 'Exporting...' : 'Export'}
               </button>
               <button type="button" onClick={handleOpenExcel} title="Open in Excel"
                 className="text-olive hover:text-warm-gray transition cursor-pointer px-4 py-2 rounded-lg hover:bg-gray-100">
@@ -416,19 +403,6 @@ function Dashboard() {
           </div>
         </div>
       </div>
-
-      {/* Export result bar */}
-      {exportResult && (
-        <div className="bg-light-sage border border-sage text-olive px-4 py-3 rounded mb-4 flex items-center justify-between">
-          <span className="font-heading text-sm">
-            GC Package exported: <strong>{exportResult.filename}</strong> ({exportResult.tabs} tabs, {exportResult.rows} rows)
-          </span>
-          <button onClick={() => { handleOpenFile(exportResult.path); setExportResult(null) }}
-            className="bg-olive text-white font-heading font-bold px-3 py-1 rounded text-sm hover:bg-warm-gray transition">
-            Open File
-          </button>
-        </div>
-      )}
 
       {/* Error banner */}
       {syncError && (

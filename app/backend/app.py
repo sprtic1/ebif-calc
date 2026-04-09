@@ -265,6 +265,11 @@ def export_gc(project_id):
     try:
         from services.gc_export import generate_gc_package
         result = generate_gc_package(project)
+        # Open the EXPORT folder in Windows Explorer
+        try:
+            os.startfile(result['folder'])
+        except Exception:
+            pass
         return jsonify(result)
     except FileNotFoundError as e:
         return jsonify({'error': str(e)}), 404
@@ -272,20 +277,6 @@ def export_gc(project_id):
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Export failed: {e}'}), 500
-
-
-@app.route('/api/projects/<project_id>/open-file', methods=['POST'])
-def open_file(project_id):
-    """Open any file path via os.startfile (Windows)."""
-    data = request.get_json(silent=True) or {}
-    file_path = data.get('path', '')
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'File not found'}), 404
-    try:
-        os.startfile(file_path)
-        return jsonify({'opened': True})
-    except Exception as e:
-        return jsonify({'error': f'Could not open: {e}'}), 500
 
 
 @app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
