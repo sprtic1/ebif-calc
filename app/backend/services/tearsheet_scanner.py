@@ -35,11 +35,11 @@ MIN_HIGHLIGHT_AREA = 5000
 # Color detection ranges in HSV space
 # Each entry: (label, hsv_lower, hsv_upper)
 HIGHLIGHT_COLORS = [
-    ("yellow",  np.array([15, 35, 200]),  np.array([35, 255, 255])),
-    ("green",   np.array([35, 40, 180]),  np.array([85, 255, 255])),
-    ("blue",    np.array([85, 40, 180]),  np.array([130, 255, 255])),
-    ("pink",    np.array([145, 35, 200]), np.array([165, 255, 255])),
-    ("purple",  np.array([125, 35, 180]), np.array([145, 255, 255])),
+    ("yellow",  np.array([20, 40, 220]),  np.array([35, 255, 255])),   # warm yellow, excludes brown product images
+    ("green",   np.array([35, 40, 180]),  np.array([60, 255, 255])),   # yellow-green highlights
+    ("blue",    np.array([80, 40, 180]),  np.array([130, 255, 255])),   # cyan to blue
+    ("pink",    np.array([145, 35, 200]), np.array([165, 255, 255])),   # magenta/pink
+    ("purple",  np.array([125, 35, 180]), np.array([145, 255, 255])),   # blue-purple
 ]
 
 # Color → Excel column mapping (1-indexed)
