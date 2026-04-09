@@ -313,24 +313,41 @@ function Dashboard() {
               This will write Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
             </p>
             {/* Progress bar during extract/write */}
-            {writing && writeProgress && (
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-heading text-olive">
-                    {writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'} {writeProgress.category}...
-                  </span>
-                  <span className="text-sm font-heading text-warm-gray">
-                    {writeProgress.step}/{writeProgress.total} ({Math.round((writeProgress.step / writeProgress.total) * 100)}%)
-                  </span>
+            {writing && writeProgress && (() => {
+              const phase = writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'
+              const pct = Math.round((writeProgress.step / writeProgress.total) * 100)
+              const hasItems = writeProgress.items_total != null && writeProgress.items_total > 0
+              const itemPct = hasItems ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100) : pct
+              const barPct = hasItems ? itemPct : pct
+              return (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-heading text-olive">
+                      {phase} {writeProgress.category}...
+                      {hasItems && (
+                        <span className="text-warm-gray ml-1">
+                          {writeProgress.items_so_far}/{writeProgress.items_total} items
+                        </span>
+                      )}
+                      {!hasItems && writeProgress.items_so_far > 0 && (
+                        <span className="text-warm-gray ml-1">
+                          {writeProgress.items_so_far} items
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-sm font-heading text-warm-gray">
+                      ({barPct}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="bg-olive h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${barPct}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-olive h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${(writeProgress.step / writeProgress.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
+              )
+            })()}
 
             {writing && !writeProgress && (
               <div className="mb-4">
@@ -346,7 +363,12 @@ function Dashboard() {
               >
                 {writing
                   ? (writeProgress
-                    ? `${writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'}... ${writeProgress.step}/${writeProgress.total} (${Math.round((writeProgress.step / writeProgress.total) * 100)}%)`
+                    ? (() => {
+                        const p = writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'
+                        const hasI = writeProgress.items_total != null && writeProgress.items_total > 0
+                        const iPct = hasI ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100) : Math.round((writeProgress.step / writeProgress.total) * 100)
+                        return `${p}... ${writeProgress.items_so_far != null ? writeProgress.items_so_far : ''}${hasI ? '/' + writeProgress.items_total : ''} items (${iPct}%)`
+                      })()
                     : 'Connecting...')
                   : 'Confirm & Write'}
               </button>

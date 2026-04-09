@@ -259,14 +259,16 @@ def full_extract(port=None, on_progress=None):
             e["_type"] = etype
         cache[etype] = elems
 
-    # Extract each schedule with progress
+    # Extract each schedule with progress (cumulative item count)
     schedules = {}
     total_defs = len(schedule_defs)
+    items_so_far = 0
     for step, sdef in enumerate(schedule_defs, start=1):
         if on_progress:
-            on_progress(step, total_defs, sdef["name"])
+            on_progress(step, total_defs, sdef["name"], items_so_far, None)
         rows = extract_schedule(conn, sdef, all_elements_cache=cache)
         schedules[sdef["id"]] = rows
+        items_so_far += len(rows)
 
     counts = {sid: len(rows) for sid, rows in schedules.items()}
     total = sum(counts.values())

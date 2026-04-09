@@ -93,11 +93,13 @@ def refresh_archicad(project_id):
 
         progress_events = []
 
-        def _extract_progress(step, total, category_name):
+        def _extract_progress(step, total, category_name, items_so_far, items_total):
             progress_events.append({
                 'progress': {
                     'phase': 'extracting', 'step': step, 'total': total,
                     'category': category_name,
+                    'items_so_far': items_so_far,
+                    'items_total': items_total,
                 }
             })
 
@@ -136,11 +138,13 @@ def refresh_archicad(project_id):
         # Write to Excel in a thread, streaming progress
         write_error = [None]
 
-        def _write_progress(step, total, category_name):
+        def _write_progress(step, total, category_name, items_so_far, items_total):
             progress_events.append({
                 'progress': {
                     'phase': 'writing', 'step': step, 'total': total,
                     'category': category_name,
+                    'items_so_far': items_so_far,
+                    'items_total': items_total,
                 }
             })
 

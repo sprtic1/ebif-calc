@@ -95,6 +95,8 @@ def write_to_master(
     wb = load_workbook(xlsm_path, keep_vba=True)
     result = {}
     total_steps = len(schedule_defs)
+    total_items = sum(len(schedules.get(s['id'], [])) for s in schedule_defs)
+    items_so_far = 0
 
     for step, sdef in enumerate(schedule_defs, start=1):
         sid = sdef['id']
@@ -102,7 +104,9 @@ def write_to_master(
         rows = schedules.get(sid, [])
 
         if on_progress:
-            on_progress(step, total_steps, sname)
+            on_progress(step, total_steps, sname, items_so_far, total_items)
+
+        items_so_far += len(rows)
 
         if not rows:
             result[sid] = 0
