@@ -5,25 +5,31 @@ All Archicad data is written starting at column N (14) onward:
   R+ = Element Type, Library Part Name, Layer, Classifications, etc.
 
 Columns A–D contain formulas that reference the Archicad data:
-  A =N{row}  (EBIF UID)
-  B =O{row}  (QTY)
-  C =P{row}  (Tear Sheet #)
-  D =Q{row}  (Location)
+  A =N{row}, B =O{row}, C =P{row}, D =Q{row}
 
 Columns E–K are MANUAL (never touched). L–M are empty (never touched).
 Table of Contents tab is never modified.
 
 Row 4 = header row. Data starts at row 5.
-On refresh, clears A–D and N onward from row 5 down. Also clears any
-stray data in L–M from previous buggy writes.
+On refresh: backup file, check lock, clear A–D + N onward, rewrite, validate.
 
-Excel Table objects are removed before writing to prevent repair errors.
+Robustness:
+- Creates timestamped backup before every write (keeps last 5)
+- Checks for file lock before writing
+- Removes Excel Table objects (handles both str and Table types)
+- Retries save up to 3 times with 2s delay
+- Per-category error isolation — failures don't abort remaining categories
+- Validates first row after write
 
 Uses openpyxl with keep_vba=True to preserve macros.
 """
 
+import glob
 import logging
 import os
+import shutil
+import time
+from datetime import datetime
 
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -69,6 +75,15 @@ FORMULA_SRC_COLS = [14, 15, 16, 17]  # N, O, P, Q
 # Tabs to skip
 SKIP_TABS = {"Table of Contents"}
 
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # seconds
+MAX_BACKUPS = 5
+
+
+class FileLockError(Exception):
+    """Raised when the Excel file is open/locked by another process."""
+    pass
+
 
 def write_to_master(
     project_folder,
@@ -82,18 +97,29 @@ def write_to_master(
         project_folder: Full path to the project folder
         schedules: dict mapping schedule_id -> list of row dicts
         schedule_defs: list of schedule definition dicts (with resolved column info)
-        on_progress: Optional callback(step, total, schedule_name) called after each category
+        on_progress: Optional callback(step, total, schedule_name, items_so_far, items_total)
 
     Returns:
-        dict mapping schedule_id -> number of rows written
+        dict with keys:
+            counts: {schedule_id: int}
+            failed: [schedule_id, ...] — categories that failed (if any)
+            warnings: [str, ...] — validation warnings
     """
     xlsm_path = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
 
     if not os.path.exists(xlsm_path):
         raise FileNotFoundError(f"EBIF Master Template not found: {xlsm_path}")
 
+    # Check if file is locked
+    _check_file_lock(xlsm_path)
+
+    # Create timestamped backup
+    _create_backup(xlsm_path)
+
     wb = load_workbook(xlsm_path, keep_vba=True)
     result = {}
+    failed = []
+    warnings = []
     total_steps = len(schedule_defs)
     total_items = sum(len(schedules.get(s['id'], [])) for s in schedule_defs)
     items_so_far = 0
@@ -112,100 +138,213 @@ def write_to_master(
             result[sid] = 0
             continue
 
-        # Find matching sheet (handles emoji prefixes)
-        ws = _find_sheet(wb, sname)
-
-        if ws is None:
-            logger.warning("Sheet not found for '%s' — skipping", sname)
+        try:
+            _write_schedule(wb, sdef, rows)
+            result[sid] = len(rows)
+            logger.info("Wrote %d rows for '%s'", len(rows), sname)
+        except Exception as e:
+            logger.error("Failed to write '%s': %s", sname, e)
+            failed.append(sid)
             result[sid] = 0
-            continue
 
-        # Skip Table of Contents
-        if any(skip in ws.title for skip in SKIP_TABS):
-            result[sid] = 0
-            continue
+    # Save with retry logic (handles file-in-use by Excel)
+    _save_with_retry(wb, xlsm_path)
 
-        # Remove Excel Table objects to prevent repair errors
-        _remove_tables(ws)
+    # Validate first row of each written schedule
+    try:
+        wb_check = load_workbook(xlsm_path, keep_vba=True, data_only=True)
+        for sdef in schedule_defs:
+            sid = sdef['id']
+            if result.get(sid, 0) > 0:
+                rows = schedules.get(sid, [])
+                w = _validate_first_row(wb_check, sdef, rows)
+                if w:
+                    warnings.append(w)
+    except Exception as e:
+        logger.warning("Validation read-back failed: %s", e)
 
-        # Build list of extra reference labels beyond the core 4
-        archicad_labels = sdef.get('_archicad_col_labels', [])
-        core_keys = {f[1] for f in CORE_FIELDS}
-        ref_labels = [lbl for lbl in archicad_labels if lbl not in core_keys]
+    return {'counts': result, 'failed': failed, 'warnings': warnings}
 
-        # Total Archicad columns: 4 core + N reference
-        total_ac_cols = 4 + len(ref_labels)
 
-        # Clear old data: A–D, L–M (stray), and N onward from row 5 down
-        _clear_data(ws, total_ac_cols)
+def _write_schedule(wb, sdef, rows):
+    """Write a single schedule's data into its sheet."""
+    sname = sdef['name']
 
-        # Write Archicad data headers at row 4, starting at column N
-        all_headers = [f[0] for f in CORE_FIELDS] + ref_labels
-        for j, header in enumerate(all_headers):
-            col = AC_START + j
-            cell = ws.cell(row=HEADER_ROW, column=col, value=header)
-            cell.font = HEADER_FONT
-            cell.fill = HEADER_FILL
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws = _find_sheet(wb, sname)
+    if ws is None:
+        raise ValueError(f"Sheet not found for '{sname}'")
+
+    if any(skip in ws.title for skip in SKIP_TABS):
+        return
+
+    # Remove Excel Table objects to prevent repair errors
+    _remove_tables(ws)
+
+    # Build reference labels
+    archicad_labels = sdef.get('_archicad_col_labels', [])
+    core_keys = {f[1] for f in CORE_FIELDS}
+    ref_labels = [lbl for lbl in archicad_labels if lbl not in core_keys]
+    total_ac_cols = 4 + len(ref_labels)
+
+    # Clear old data
+    _clear_data(ws, total_ac_cols)
+
+    # Write headers at row 4 starting at column N
+    all_headers = [f[0] for f in CORE_FIELDS] + ref_labels
+    for j, header in enumerate(all_headers):
+        col = AC_START + j
+        cell = ws.cell(row=HEADER_ROW, column=col, value=header)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = THIN_BORDER
+
+    # Write data rows
+    for i, row_data in enumerate(rows):
+        row_num = DATA_START + i
+
+        # Core 4 at N, O, P, Q
+        _write_cell(ws, row_num, AC_START + 0, row_data.get('EBIF UID', ''), i)
+        _write_cell(ws, row_num, AC_START + 1, row_data.get('Qty', 1), i)
+        _write_cell(ws, row_num, AC_START + 2, row_data.get('TEAR SHEET #', ''), i)
+        _write_cell(ws, row_num, AC_START + 3, row_data.get('Location', ''), i)
+
+        # Reference columns at R+
+        for j, lbl in enumerate(ref_labels):
+            col = AC_START + 4 + j
+            _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
+
+        # Formulas in A–D referencing N–Q
+        for dest_col, src_col in zip(FORMULA_COLS, FORMULA_SRC_COLS):
+            src_letter = get_column_letter(src_col)
+            cell = ws.cell(row=row_num, column=dest_col, value=f"={src_letter}{row_num}")
+            cell.font = BODY_FONT
             cell.border = THIN_BORDER
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+            cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
 
-        # Write data rows
-        for i, row_data in enumerate(rows):
-            row_num = DATA_START + i
 
-            # Core 4 fields at N(14), O(15), P(16), Q(17)
-            _write_cell(ws, row_num, AC_START + 0, row_data.get('EBIF UID', ''), i)
-            _write_cell(ws, row_num, AC_START + 1, row_data.get('Qty', 1), i)
-            _write_cell(ws, row_num, AC_START + 2, row_data.get('TEAR SHEET #', ''), i)
-            _write_cell(ws, row_num, AC_START + 3, row_data.get('Location', ''), i)
+def _check_file_lock(xlsm_path):
+    """Check if the file is locked by another process (e.g. Excel)."""
+    lock_file = os.path.join(os.path.dirname(xlsm_path), '~$' + os.path.basename(xlsm_path))
+    if os.path.exists(lock_file):
+        raise FileLockError(
+            "Please close the Excel file and try again."
+        )
+    # Also try opening for write to confirm
+    try:
+        with open(xlsm_path, 'r+b'):
+            pass
+    except PermissionError:
+        raise FileLockError(
+            "Please close the Excel file and try again."
+        )
 
-            # Extra reference columns at R(18), S(19), T(20), ...
-            for j, lbl in enumerate(ref_labels):
-                col = AC_START + 4 + j
-                _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
 
-            # Formulas in A–D referencing N–Q
-            for dest_col, src_col in zip(FORMULA_COLS, FORMULA_SRC_COLS):
-                src_letter = get_column_letter(src_col)
-                cell = ws.cell(row=row_num, column=dest_col, value=f"={src_letter}{row_num}")
-                cell.font = BODY_FONT
-                cell.border = THIN_BORDER
-                cell.alignment = Alignment(vertical="center", wrap_text=True)
-                cell.fill = LOCKED_ALT_FILL if i % 2 == 0 else LOCKED_FILL
+def _create_backup(xlsm_path):
+    """Create a timestamped backup, keeping only the last MAX_BACKUPS."""
+    backup_dir = os.path.join(os.path.dirname(xlsm_path), '_backups')
+    os.makedirs(backup_dir, exist_ok=True)
 
-        result[sid] = len(rows)
-        logger.info("Wrote %d rows to sheet '%s'", len(rows), ws.title)
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H%M')
+    base = os.path.splitext(os.path.basename(xlsm_path))[0]
+    backup_name = f"{base}_{timestamp}.xlsm"
+    backup_path = os.path.join(backup_dir, backup_name)
 
-    wb.save(xlsm_path)
-    logger.info("Saved EBIF Master Template: %s", xlsm_path)
-    return result
+    shutil.copy2(xlsm_path, backup_path)
+    logger.info("Backup created: %s", backup_path)
+
+    # Prune old backups — keep only the last MAX_BACKUPS
+    pattern = os.path.join(backup_dir, f"{base}_*.xlsm")
+    backups = sorted(glob.glob(pattern), key=os.path.getmtime)
+    while len(backups) > MAX_BACKUPS:
+        old = backups.pop(0)
+        os.remove(old)
+        logger.info("Removed old backup: %s", old)
+
+
+def _save_with_retry(wb, xlsm_path):
+    """Save the workbook with retry logic for file-in-use scenarios."""
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            wb.save(xlsm_path)
+            logger.info("Saved EBIF Master Template: %s", xlsm_path)
+            return
+        except PermissionError as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                logger.warning("Save attempt %d failed (file locked), retrying in %ds...",
+                               attempt, RETRY_DELAY)
+                time.sleep(RETRY_DELAY)
+            else:
+                raise FileLockError(
+                    "Please close the Excel file and try again."
+                ) from e
+        except Exception as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                logger.warning("Save attempt %d failed: %s, retrying in %ds...",
+                               attempt, e, RETRY_DELAY)
+                time.sleep(RETRY_DELAY)
+            else:
+                raise RuntimeError(f"Excel save failed after {MAX_RETRIES} attempts: {e}") from e
+
+
+def _validate_first_row(wb, sdef, rows):
+    """Read back the first data row and verify it matches what was written.
+
+    Returns a warning string if validation fails, or None if OK.
+    """
+    if not rows:
+        return None
+
+    sname = sdef['name']
+    ws = _find_sheet(wb, sname)
+    if ws is None:
+        return f"Validation: sheet not found for '{sname}'"
+
+    expected_uid = rows[0].get('EBIF UID', '')
+    actual_uid = ws.cell(row=DATA_START, column=AC_START).value
+
+    if str(actual_uid or '').strip() != str(expected_uid or '').strip():
+        msg = f"Validation mismatch in '{sname}': expected EBIF UID '{expected_uid}', got '{actual_uid}'"
+        logger.warning(msg)
+        return msg
+
+    return None
 
 
 def _remove_tables(ws):
     """Remove all Excel Table objects from a worksheet.
 
-    Excel Tables (ListObjects) cause repair errors when openpyxl writes
-    data into cells that overlap with a table's range. Removing them
-    preserves the cell data but eliminates the structured table definition.
+    Handles both Table objects (with .name attr) and raw strings.
     """
-    if hasattr(ws, '_tables') and ws._tables:
-        table_names = [t.name for t in ws._tables]
-        ws._tables = []
+    tables = getattr(ws, '_tables', None)
+    if not tables:
+        return
+
+    names = []
+    for t in tables:
+        if isinstance(t, str):
+            names.append(t)
+        elif hasattr(t, 'name'):
+            names.append(t.name)
+        else:
+            names.append(repr(t))
+
+    ws._tables = []
+    if names:
         logger.info("Removed %d Excel Table(s) from '%s': %s",
-                     len(table_names), ws.title, ', '.join(table_names))
+                     len(names), ws.title, ', '.join(names))
 
 
 def _find_sheet(wb, schedule_name):
-    """Find a sheet by schedule name, handling emoji prefixes.
-
-    Sheets have emoji prefixes like '🍳 Appliances'. We match by checking
-    if any sheet name ends with the schedule name.
-    """
+    """Find a sheet by schedule name, handling emoji prefixes."""
     if schedule_name in wb.sheetnames:
         return wb[schedule_name]
 
     for sheet_name in wb.sheetnames:
-        # Strip leading non-ASCII characters and spaces (emoji prefix)
         stripped = sheet_name
         while stripped and (not stripped[0].isascii() or stripped[0] == ' '):
             stripped = stripped[1:]
@@ -237,29 +376,19 @@ def _write_cell(ws, row, col, value, row_index):
 def _clear_data(ws, total_ac_cols):
     """Clear old Archicad data from row 5 downward.
 
-    Clears:
-      - Columns A–D (1–4) — old formulas
-      - Columns L–M (12–13) — stray data from previous buggy writes
-      - Column N (14) onward — old Archicad data
-    NEVER touches columns E–K (5–11) — manual columns.
+    Clears A–D, L–M (stray), and N onward. NEVER touches E–K.
     """
     max_row = ws.max_row or DATA_START
     if max_row < DATA_START:
         return
 
-    # Determine the furthest column to clear
     max_ac_col = AC_START + total_ac_cols
     furthest = max(max_ac_col, ws.max_column + 1) if ws.max_column else max_ac_col
 
     for row_num in range(DATA_START, max_row + 1):
-        # Clear A–D (formula columns)
         for col in range(1, 5):
             ws.cell(row=row_num, column=col).value = None
-
-        # Clear L–M (12–13) — fix stray data from previous writes
         for col in range(12, 14):
             ws.cell(row=row_num, column=col).value = None
-
-        # Clear N onward (Archicad data columns)
         for col in range(AC_START, furthest):
             ws.cell(row=row_num, column=col).value = None

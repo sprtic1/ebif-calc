@@ -136,6 +136,7 @@ def refresh_archicad(project_id):
         result = extract_result[0]
 
         # Write to Excel in a thread, streaming progress
+        write_result = [None]
         write_error = [None]
 
         def _write_progress(step, total, category_name, items_so_far, items_total):
@@ -150,11 +151,13 @@ def refresh_archicad(project_id):
 
         def _do_write():
             try:
-                from services.excel_writer import write_to_master
-                write_to_master(
+                from services.excel_writer import write_to_master, FileLockError
+                write_result[0] = write_to_master(
                     folder, result['schedules'], result['schedule_defs'],
                     on_progress=_write_progress,
                 )
+            except FileLockError as e:
+                write_error[0] = str(e)
             except FileNotFoundError as e:
                 write_error[0] = str(e)
             except Exception as e:
@@ -182,14 +185,31 @@ def refresh_archicad(project_id):
         project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
         save_projects(projects)
 
+        # Build response with failure details
         response = {
             'result': {
                 'project': project,
                 'total': result.get('total', 0),
             }
         }
+
+        # Collect all failures and warnings
+        issues = []
+        extract_failures = result.get('extract_failures', [])
+        if extract_failures:
+            issues.append(f"Extraction failed for: {', '.join(extract_failures)}")
+
         if write_error[0]:
-            response['result']['excel_error'] = write_error[0]
+            issues.append(write_error[0])
+        elif write_result[0]:
+            wr = write_result[0]
+            if wr.get('failed'):
+                issues.append(f"Excel write failed for: {', '.join(wr['failed'])}")
+            if wr.get('warnings'):
+                issues.extend(wr['warnings'])
+
+        if issues:
+            response['result']['excel_error'] = ' | '.join(issues)
 
         yield _json.dumps(response) + '\n'
 

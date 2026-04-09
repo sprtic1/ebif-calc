@@ -259,14 +259,34 @@ def full_extract(port=None, on_progress=None):
             e["_type"] = etype
         cache[etype] = elems
 
-    # Extract each schedule with progress (cumulative item count)
+    # Extract each schedule with progress and per-category retry
     schedules = {}
+    extract_failures = []
     total_defs = len(schedule_defs)
     items_so_far = 0
     for step, sdef in enumerate(schedule_defs, start=1):
         if on_progress:
             on_progress(step, total_defs, sdef["name"], items_so_far, None)
-        rows = extract_schedule(conn, sdef, all_elements_cache=cache)
+
+        rows = []
+        last_err = None
+        for attempt in range(1, 4):  # retry up to 3 times
+            try:
+                rows = extract_schedule(conn, sdef, all_elements_cache=cache)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                logger.warning("Extract '%s' attempt %d failed: %s", sdef["name"], attempt, e)
+                if attempt < 3:
+                    import time
+                    time.sleep(2)
+
+        if last_err:
+            logger.error("Extract '%s' failed after 3 attempts: %s", sdef["name"], last_err)
+            extract_failures.append(sdef["id"])
+            rows = []
+
         schedules[sdef["id"]] = rows
         items_so_far += len(rows)
 
@@ -278,6 +298,7 @@ def full_extract(port=None, on_progress=None):
         'schedule_defs': schedule_defs,
         'counts': counts,
         'total': total,
+        'extract_failures': extract_failures,
     }
 
 
