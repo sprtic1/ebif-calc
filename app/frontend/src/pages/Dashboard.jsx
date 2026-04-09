@@ -61,6 +61,13 @@ function Dashboard() {
   // Export state
   const [exporting, setExporting] = useState(false)
 
+  // Button row ref for hint text width
+  const btnRowRef = useRef(null)
+  const [btnRowWidth, setBtnRowWidth] = useState(0)
+  useEffect(() => {
+    if (btnRowRef.current) setBtnRowWidth(btnRowRef.current.offsetWidth)
+  })
+
   // Archicad sync state
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState('')
@@ -367,8 +374,8 @@ function Dashboard() {
               Last synced: {project.last_synced ? new Date(project.last_synced).toLocaleString() : 'Never'}
             </p>
           </div>
-          <div className="inline-flex flex-col items-end">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end">
+            <div ref={btnRowRef} className="flex items-center gap-2">
               {syncing && syncStatus && (
                 <button onClick={cancelRetry} className="text-warm-gray font-heading font-bold px-4 py-2 rounded-lg hover:text-red-600 transition text-sm">
                   Cancel
@@ -404,7 +411,8 @@ function Dashboard() {
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-warm-gray mt-1 text-right w-full">
+            <p className="text-xs text-warm-gray mt-1 text-right"
+              style={btnRowWidth ? { width: btnRowWidth, maxWidth: btnRowWidth } : undefined}>
               Updates the EBIF MASTER TEMPLATE in this project's Dropbox folder, directly from the live Archicad model. The project must be open in Archicad with the Tapir palette running.
             </p>
           </div>
