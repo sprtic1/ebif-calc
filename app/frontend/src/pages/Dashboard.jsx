@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 const SCHEDULE_LABELS = {
@@ -18,6 +18,34 @@ const SCHEDULE_LABELS = {
   specialty_equipment: 'Specialty Equipment',
   surface_finishes: 'Surface Finishes',
   tile: 'Tile',
+}
+
+// --- Notification sounds via Web Audio API ---
+function playTone(frequency, duration, type = 'sine') {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = type
+    osc.frequency.value = frequency
+    gain.gain.value = 0.15
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + duration)
+  } catch { /* audio not available */ }
+}
+
+function playSuccessSound() {
+  playTone(523, 0.15)  // C5
+  setTimeout(() => playTone(659, 0.15), 150) // E5
+  setTimeout(() => playTone(784, 0.3), 300)  // G5
+}
+
+function playErrorSound() {
+  playTone(330, 0.25, 'square') // E4 buzzy
+  setTimeout(() => playTone(262, 0.4, 'square'), 300) // C4 buzzy
 }
 
 function Dashboard() {
@@ -95,96 +123,8 @@ function Dashboard() {
     setSyncStatus('')
   }
 
-  const scanForInstances = async (preferredPort) => {
-    // Try preferred port first (last successful port)
-    if (preferredPort) {
-      try {
-        const res = await fetch('/api/archicad/instances')
-        const data = await res.json()
-        if (data.instances && data.instances.length > 0) {
-          const preferred = data.instances.find(i => i.port === preferredPort)
-          if (preferred && data.instances.length === 1) {
-            setSyncStatus('')
-            await fetchPreview(preferred.port)
-            return
-          }
-          if (data.instances.length > 0) {
-            setSyncStatus('')
-            if (data.instances.length === 1) {
-              await fetchPreview(data.instances[0].port)
-            } else {
-              setInstances(data.instances)
-              setSyncing(false)
-            }
-            return
-          }
-        }
-      } catch {
-        // fall through to retry
-      }
-    } else {
-      try {
-        const res = await fetch('/api/archicad/instances')
-        const data = await res.json()
-
-        if (data.instances && data.instances.length > 0) {
-          setSyncStatus('')
-          if (data.instances.length === 1) {
-            await fetchPreview(data.instances[0].port)
-          } else {
-            setInstances(data.instances)
-            setSyncing(false)
-          }
-          return
-        }
-      } catch {
-        // Network error — keep retrying
-      }
-    }
-
-    // No instances found — retry in 5 seconds
-    setSyncStatus('Waiting for Tapir...')
-    const timer = setTimeout(() => scanForInstances(null), 5000)
-    setRetryTimer(timer)
-  }
-
-  const handleRefreshClick = async () => {
-    setSyncing(true)
-    setSyncError('')
-    setSyncStatus('Scanning...')
-    setInstances(null)
-    setPreview(null)
-    setSelectedPort(null)
-    const preferredPort = project?.last_tapir_port || null
-    await scanForInstances(preferredPort)
-  }
-
-  const handleInstanceSelect = async (port) => {
-    setInstances(null)
-    setSyncing(true)
-    await fetchPreview(port)
-  }
-
-  const fetchPreview = async (port) => {
-    setSelectedPort(port)
-    try {
-      const res = await fetch(`/api/projects/${id}/preview?port=${port}`)
-      const data = await res.json()
-      if (!res.ok) {
-        setSyncError(data.error || 'Preview failed')
-        setSyncing(false)
-        return
-      }
-      setSyncError('')
-      setPreview(data)
-      setSyncing(false)
-    } catch {
-      setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
-      setSyncing(false)
-    }
-  }
-
-  const handleConfirmRefresh = async () => {
+  // Auto-start refresh when preview loads
+  const doRefresh = useCallback(async (port) => {
     setWriting(true)
     setSyncError('')
     setWriteProgress(null)
@@ -192,7 +132,7 @@ function Dashboard() {
       const res = await fetch(`/api/projects/${id}/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ port: selectedPort }),
+        body: JSON.stringify({ port }),
       })
 
       const reader = res.body.getReader()
@@ -214,6 +154,7 @@ function Dashboard() {
               setSyncError(msg.error)
               setWriting(false)
               setWriteProgress(null)
+              playErrorSound()
               return
             }
             if (msg.progress) {
@@ -237,6 +178,7 @@ function Dashboard() {
         setWriting(false)
         setToast(`Success! ${total} items written`)
         showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated`)
+        playSuccessSound()
         if (finalResult.excel_error) {
           setSyncError(`Data synced but: ${finalResult.excel_error}`)
         }
@@ -244,11 +186,87 @@ function Dashboard() {
         setSyncError('Refresh completed but no result received')
         setWriting(false)
         setWriteProgress(null)
+        playErrorSound()
       }
     } catch {
       setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
       setWriting(false)
       setWriteProgress(null)
+      playErrorSound()
+    }
+  }, [id])
+
+  const scanForInstances = async (preferredPort) => {
+    try {
+      const res = await fetch('/api/archicad/instances')
+      const data = await res.json()
+
+      if (data.instances && data.instances.length > 0) {
+        setSyncStatus('')
+        if (data.instances.length === 1) {
+          await fetchPreviewAndRefresh(data.instances[0].port)
+        } else {
+          // If preferred port is in the list and only wanting quick reconnect
+          if (preferredPort) {
+            const preferred = data.instances.find(i => i.port === preferredPort)
+            if (preferred) {
+              await fetchPreviewAndRefresh(preferred.port)
+              return
+            }
+          }
+          setInstances(data.instances)
+          setSyncing(false)
+        }
+        return
+      }
+    } catch {
+      // Network error — keep retrying
+    }
+
+    // No instances found — retry in 5 seconds
+    setSyncStatus('Waiting for Tapir...')
+    const timer = setTimeout(() => scanForInstances(null), 5000)
+    setRetryTimer(timer)
+  }
+
+  const handleRefreshClick = async () => {
+    setSyncing(true)
+    setSyncError('')
+    setSyncStatus('Scanning...')
+    setInstances(null)
+    setPreview(null)
+    setSelectedPort(null)
+    const preferredPort = project?.last_tapir_port || null
+    await scanForInstances(preferredPort)
+  }
+
+  const handleInstanceSelect = async (port) => {
+    setInstances(null)
+    setSyncing(true)
+    await fetchPreviewAndRefresh(port)
+  }
+
+  const fetchPreviewAndRefresh = async (port) => {
+    setSelectedPort(port)
+    setSyncStatus('Loading preview...')
+    try {
+      const res = await fetch(`/api/projects/${id}/preview?port=${port}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncError(data.error || 'Preview failed')
+        setSyncing(false)
+        playErrorSound()
+        return
+      }
+      setSyncError('')
+      setPreview(data)
+      setSyncing(false)
+      // Auto-start the refresh immediately
+      await doRefresh(port)
+    } catch {
+      setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
+      setSyncing(false)
+      playErrorSound()
     }
   }
 
@@ -360,12 +378,12 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Preview modal overlay */}
+      {/* Progress modal — shows preview counts + live progress */}
       {preview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4">
             <h3 className="font-heading text-xl font-bold text-olive mb-4">
-              Archicad Preview — {preview.total} elements found
+              Archicad Sync — {preview.total} elements
             </h3>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-6">
               {Object.entries(SCHEDULE_LABELS).map(([key, label]) => {
@@ -380,34 +398,27 @@ function Dashboard() {
                 )
               })}
             </div>
-            <p className="text-xs text-warm-gray mb-4">
-              This will write Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
-            </p>
-            {/* Progress bar during extract/write */}
+
+            {/* Progress bar */}
             {writing && writeProgress && (() => {
               const phase = writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'
-              const pct = Math.round((writeProgress.step / writeProgress.total) * 100)
               const hasItems = writeProgress.items_total != null && writeProgress.items_total > 0
-              const itemPct = hasItems ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100) : pct
-              const barPct = hasItems ? itemPct : pct
+              const barPct = hasItems
+                ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100)
+                : Math.round((writeProgress.step / writeProgress.total) * 100)
               return (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-heading text-olive">
                       {phase} {writeProgress.category}...
-                      {hasItems && (
-                        <span className="text-warm-gray ml-1">
-                          {writeProgress.items_so_far}/{writeProgress.items_total} items
-                        </span>
-                      )}
-                      {!hasItems && writeProgress.items_so_far > 0 && (
-                        <span className="text-warm-gray ml-1">
-                          {writeProgress.items_so_far} items
-                        </span>
-                      )}
                     </span>
                     <span className="text-sm font-heading text-warm-gray">
-                      ({barPct}%)
+                      {hasItems
+                        ? `${writeProgress.items_so_far}/${writeProgress.items_total} items (${barPct}%)`
+                        : writeProgress.items_so_far > 0
+                          ? `${writeProgress.items_so_far} items (${barPct}%)`
+                          : `${writeProgress.step}/${writeProgress.total} (${barPct}%)`
+                      }
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
@@ -426,31 +437,9 @@ function Dashboard() {
               </div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={handleConfirmRefresh}
-                disabled={writing}
-                className="flex-1 bg-olive text-white font-heading font-bold py-3 rounded-lg hover:bg-warm-gray transition disabled:opacity-50"
-              >
-                {writing
-                  ? (writeProgress
-                    ? (() => {
-                        const p = writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'
-                        const hasI = writeProgress.items_total != null && writeProgress.items_total > 0
-                        const iPct = hasI ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100) : Math.round((writeProgress.step / writeProgress.total) * 100)
-                        return `${p}... ${writeProgress.items_so_far != null ? writeProgress.items_so_far : ''}${hasI ? '/' + writeProgress.items_total : ''} items (${iPct}%)`
-                      })()
-                    : 'Connecting...')
-                  : 'Confirm & Write'}
-              </button>
-              <button
-                onClick={() => { setPreview(null); setSelectedPort(null); setWriteProgress(null) }}
-                disabled={writing}
-                className="flex-1 bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
+            <p className="text-xs text-warm-gray">
+              Writing Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
+            </p>
           </div>
         </div>
       )}
