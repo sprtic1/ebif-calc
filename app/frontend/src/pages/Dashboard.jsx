@@ -189,10 +189,7 @@ function Dashboard() {
         if (data.instances.length === 1) {
           await fetchPreviewAndRefresh(data.instances[0].port)
         } else {
-          if (preferredPort) {
-            const preferred = data.instances.find(i => i.port === preferredPort)
-            if (preferred) { await fetchPreviewAndRefresh(preferred.port); return }
-          }
+          // Multiple instances — always show selector so user picks the right project
           setInstances(data.instances); setSyncing(false)
         }
         return
