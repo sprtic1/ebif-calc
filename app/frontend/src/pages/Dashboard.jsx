@@ -352,52 +352,62 @@ function Dashboard() {
 
       {/* ===== 1. HEADER ===== */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Link to="/" className="text-olive hover:text-warm-gray transition">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </Link>
+        {/* Top row: back arrow */}
+        <Link to="/" className="text-olive hover:text-warm-gray transition inline-block mb-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </Link>
+
+        {/* Second row: title left, buttons right */}
+        <div className="flex items-center justify-between">
           <h1 className="font-heading text-3xl font-bold text-olive">{project.project_name}</h1>
-        </div>
-        <p className="text-xs text-warm-gray mb-3">
-          Last synced: {project.last_synced ? new Date(project.last_synced).toLocaleString() : 'Never'}
-        </p>
-        <div className="flex items-center gap-2 flex-wrap">
-          {syncing && syncStatus && (
-            <button onClick={cancelRetry} className="text-warm-gray font-heading font-bold px-4 py-2 rounded-lg hover:text-red-600 transition text-sm">
-              Cancel
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {syncing && syncStatus && (
+              <button onClick={cancelRetry} className="text-warm-gray font-heading font-bold px-4 py-2 rounded-lg hover:text-red-600 transition text-sm">
+                Cancel
+              </button>
+            )}
+            <button onClick={handleRefreshExcel} disabled={syncing || writing}
+              className="bg-sage text-olive font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive hover:text-white transition shadow text-sm disabled:opacity-50">
+              {syncing && syncStatus === 'Reading Excel...' ? 'Reading...' : 'Refresh from Excel'}
             </button>
-          )}
-          <button onClick={handleRefreshExcel} disabled={syncing || writing}
-            className="bg-sage text-olive font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive hover:text-white transition shadow text-sm disabled:opacity-50">
-            {syncing && syncStatus === 'Reading Excel...' ? 'Reading...' : 'Refresh from Excel'}
-          </button>
-          <button onClick={handleRefreshClick} disabled={syncing || writing}
-            className="bg-olive text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-warm-gray transition shadow text-sm disabled:opacity-50">
-            {syncing && syncStatus !== 'Reading Excel...' ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
-          </button>
-          <button onClick={handleScanTearSheets} disabled={scanning || syncing || writing}
-            className="bg-warm-gray text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50">
-            {scanning ? 'Scanning...' : 'Scan Tear Sheets'}
-          </button>
-          <button type="button" onClick={handleOpenExcel} title="Open in Excel"
-            className="bg-white text-olive border border-sage transition cursor-pointer px-3 py-2 rounded-lg hover:bg-light-sage">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="8" y1="13" x2="16" y2="13" />
-              <line x1="8" y1="17" x2="16" y2="17" />
-            </svg>
-          </button>
-          <button type="button" onClick={handleExportGC} disabled={exporting} title="Export GC Package"
-            className="bg-white text-olive border border-sage transition cursor-pointer px-3 py-2 rounded-lg hover:bg-light-sage disabled:opacity-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
+            <button onClick={handleRefreshClick} disabled={syncing || writing}
+              className="bg-olive text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-warm-gray transition shadow text-sm disabled:opacity-50">
+              {syncing && syncStatus !== 'Reading Excel...' ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
+            </button>
+            <button onClick={handleScanTearSheets} disabled={scanning || syncing || writing}
+              className="bg-warm-gray text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50">
+              {scanning ? 'Scanning...' : 'Scan Tear Sheets'}
+            </button>
+            <button type="button" onClick={handleOpenExcel} title="Open in Excel"
+              className="bg-white text-olive border border-sage transition cursor-pointer px-3 py-2 rounded-lg hover:bg-light-sage">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="8" y1="13" x2="16" y2="13" />
+                <line x1="8" y1="17" x2="16" y2="17" />
+              </svg>
+            </button>
+            <button type="button" onClick={handleExportGC} disabled={exporting} title="Export GC Package"
+              className="bg-white text-olive border border-sage transition cursor-pointer px-3 py-2 rounded-lg hover:bg-light-sage disabled:opacity-50">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Third row: timestamp left, hint text right */}
+        <div className="flex items-start justify-between mt-1">
+          <p className="text-xs text-warm-gray">
+            Last synced: {project.last_synced ? new Date(project.last_synced).toLocaleString() : 'Never'}
+          </p>
+          <p className="text-xs text-warm-gray text-right max-w-sm">
+            Updates the EBIF MASTER TEMPLATE in this project's Dropbox folder, directly from the live Archicad model. The project must be open in Archicad with the Tapir palette running.
+          </p>
         </div>
       </div>
 
