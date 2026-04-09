@@ -8,7 +8,7 @@
     "folder_location": "C:/Users/linco/EID Dropbox/PROJECTS/MCCOLLUM - 408 CAYUSE COURT",
     "created_at": "2026-04-08T20:59:25.615203Z",
     "last_synced": "2026-04-09T02:45:25.138033Z",
-    "excel_filename": "MCCOLLUM - 408 CAYUSE COURT EBIF SCHEDULES.xlsm",
+    "excel_filename": "MCCOLLUM - EBIF SCHEDULES.xlsm",
     "schedules": {
       "appliances": 23,
       "bath_accessories": 0,
@@ -27,7 +27,7 @@
       "surface_finishes": 0,
       "tile": 4
     },
-    "template_path": "C:/Users/linco/EID Dropbox/PROJECTS/MCCOLLUM - 408 CAYUSE COURT/EBIF/EXCEL/MASTER/MCCOLLUM - 408 CAYUSE COURT EBIF SCHEDULES.xlsm",
+    "template_path": "C:/Users/linco/EID Dropbox/PROJECTS/MCCOLLUM - 408 CAYUSE COURT/EBIF/EXCEL/MASTER/MCCOLLUM - EBIF SCHEDULES.xlsm",
     "last_tapir_port": 19724
   }
 ]

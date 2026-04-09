@@ -113,7 +113,7 @@ def create_project():
 
     # Copy template file (non-fatal if template paths not configured)
     try:
-        template_path, excel_fname = copy_template(folder_location, project_name)
+        template_path, excel_fname = copy_template(folder_location, client_name)
         project['template_path'] = template_path
         project['excel_filename'] = excel_fname
     except Exception as e:

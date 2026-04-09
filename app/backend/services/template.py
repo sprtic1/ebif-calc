@@ -17,13 +17,13 @@ def slugify(text):
     return text
 
 
-def excel_filename(project_name):
+def excel_filename(client_name):
     """Return the project-specific Excel filename.
 
-    Format: "{ProjectName} EBIF SCHEDULES.xlsm"
-    Example: "MCCOLLUM - 408 CAYUSE COURT EBIF SCHEDULES.xlsm"
+    Format: "{ClientName} - EBIF SCHEDULES.xlsm"
+    Example: "MCCOLLUM - EBIF SCHEDULES.xlsm"
     """
-    return f"{project_name} EBIF SCHEDULES.xlsm"
+    return f"{client_name} - EBIF SCHEDULES.xlsm"
 
 
 def get_excel_path(project):
@@ -35,16 +35,16 @@ def get_excel_path(project):
     folder = project.get('folder_location', '')
     fname = project.get('excel_filename', '')
     if not fname:
-        fname = excel_filename(project.get('project_name', 'EBIF SCHEDULES'))
+        fname = excel_filename(project.get('client_name', project.get('project_name', 'PROJECT')))
     return os.path.join(folder, 'EBIF', 'EXCEL', 'MASTER', fname)
 
 
-def copy_template(project_folder, project_name):
+def copy_template(project_folder, client_name):
     """Copy the EBIF template into the project folder.
 
     The template source is defined in settings.json as a relative path
     under dropbox_root. The copy is renamed to:
-        {project_folder}/EBIF/EXCEL/MASTER/{ProjectName} EBIF SCHEDULES.xlsm
+        {project_folder}/EBIF/EXCEL/MASTER/{ClientName} - EBIF SCHEDULES.xlsm
 
     Creates subfolders if they don't exist.
     Returns (destination_path, filename) on success, or raises an error.
@@ -60,7 +60,7 @@ def copy_template(project_folder, project_name):
     dest_dir = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER')
     os.makedirs(dest_dir, exist_ok=True)
 
-    fname = excel_filename(project_name)
+    fname = excel_filename(client_name)
     dest = os.path.join(dest_dir, fname)
 
     if os.path.exists(dest):
