@@ -318,14 +318,16 @@ def _validate_first_row(wb, sdef, rows):
 def _remove_tables(ws):
     """Remove all Excel Table objects from a worksheet.
 
-    Handles both Table objects (with .name attr) and raw strings.
+    Uses the TableList's own .clear() method to preserve the correct
+    container type. Setting ws._tables = [] (plain list) breaks
+    openpyxl's save which calls ws.tables.values().
     """
     tables = getattr(ws, '_tables', None)
     if not tables:
         return
 
     names = []
-    for t in tables:
+    for t in tables.values() if hasattr(tables, 'values') else tables:
         if isinstance(t, str):
             names.append(t)
         elif hasattr(t, 'name'):
@@ -333,7 +335,11 @@ def _remove_tables(ws):
         else:
             names.append(repr(t))
 
-    ws._tables = []
+    if hasattr(tables, 'clear'):
+        tables.clear()
+    else:
+        ws._tables = type(tables)() if callable(type(tables)) else tables
+
     if names:
         logger.info("Removed %d Excel Table(s) from '%s': %s",
                      len(names), ws.title, ', '.join(names))
