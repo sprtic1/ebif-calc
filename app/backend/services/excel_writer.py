@@ -72,6 +72,9 @@ AC_START_OVERRIDES = {
     'decorative_lighting': 16,  # column P
 }
 
+# Gap column width: 250px ≈ 36 Excel units
+GAP_COL_WIDTH = 36
+
 # Core 4 Archicad fields (header label, data key)
 CORE_FIELDS = [
     ("EBIF UID", "EBIF UID"),
@@ -246,6 +249,9 @@ def _write_schedule(wb, sdef, rows):
             cell.alignment = Alignment(vertical="center", wrap_text=True)
             cell.fill = LIGHT_GRAY_FILL
 
+    # Set gap column widths (2 empty cols between manual and Archicad data)
+    _set_gap_column_widths(ws, ac_start)
+
     # Auto-fit column widths for Archicad columns — don't touch manual columns
     _autofit_archicad_columns(ws, all_headers, rows, ref_labels, ac_start)
 
@@ -392,6 +398,18 @@ def _remove_legacy_buttons(ws):
             cell = ws.cell(row=row, column=col)
             if cell.value is not None:
                 cell.value = None
+
+
+def _set_gap_column_widths(ws, ac_start):
+    """Set the 2 empty gap columns before Archicad data to 250px (~36 units).
+
+    Gap columns are ac_start-2 and ac_start-1:
+      Most tabs: L(12) and M(13)
+      Furniture: M(13) and N(14)
+      Decorative Lighting: N(14) and O(15)
+    """
+    for col_idx in (ac_start - 2, ac_start - 1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = GAP_COL_WIDTH
 
 
 def _autofit_archicad_columns(ws, all_headers, rows, ref_labels, ac_start):
