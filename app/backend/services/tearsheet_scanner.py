@@ -283,6 +283,8 @@ def extract_text_from_region(img_bgr, bbox):
         # Clean up common OCR artifacts
         text = re.sub(r'\s+', ' ', text)
         text = text.strip(' |\n\r\t')
+        # Strip trailing punctuation artifacts (colons, periods, semicolons, etc.)
+        text = re.sub(r'[.:;,!]+$', '', text).strip()
         return text if text and len(text) > 1 else ''
     except Exception as e:
         logger.warning("OCR failed for region: %s", e)
