@@ -62,10 +62,17 @@ THIN_BORDER = Border(
 HEADER_ROW = 4
 DATA_START = 5
 
-# Archicad data starts at column N (14) — NOTHING before this
-AC_START = 14  # column N
+# Archicad data start column = 2 columns after last manual column.
+# Most tabs: last manual = K(11), so AC starts at N(14).
+# Furniture: last manual = L(12), so AC starts at O(15).
+# Decorative Lighting: last manual = M(13), so AC starts at P(16).
+AC_START_DEFAULT = 14  # column N — for 13 standard tabs
+AC_START_OVERRIDES = {
+    'furniture': 15,            # column O
+    'decorative_lighting': 16,  # column P
+}
 
-# Core 4 Archicad fields written at N(14), O(15), P(16), Q(17)
+# Core 4 Archicad fields (header label, data key)
 CORE_FIELDS = [
     ("EBIF UID", "EBIF UID"),
     ("QTY", "Qty"),
@@ -73,9 +80,8 @@ CORE_FIELDS = [
     ("Location", "Location"),
 ]
 
-# Columns A–D get formulas referencing N–Q
+# Columns A–D get formulas referencing the core 4 at AC_START+0..+3
 FORMULA_COLS = [1, 2, 3, 4]  # A, B, C, D
-FORMULA_SRC_COLS = [14, 15, 16, 17]  # N, O, P, Q
 
 # Tabs to skip
 SKIP_TABS = {"Table of Contents"}
@@ -171,9 +177,15 @@ def write_to_master(
     return {'counts': result, 'failed': failed, 'warnings': warnings}
 
 
+def _get_ac_start(sid):
+    """Return the Archicad data start column for a given schedule ID."""
+    return AC_START_OVERRIDES.get(sid, AC_START_DEFAULT)
+
+
 def _write_schedule(wb, sdef, rows):
     """Write a single schedule's data into its sheet."""
     sname = sdef['name']
+    sid = sdef['id']
 
     ws = _find_sheet(wb, sname)
     if ws is None:
@@ -181,6 +193,8 @@ def _write_schedule(wb, sdef, rows):
 
     if any(skip in ws.title for skip in SKIP_TABS):
         return
+
+    ac_start = _get_ac_start(sid)
 
     # Remove Excel Table objects to prevent repair errors
     _remove_tables(ws)
@@ -195,35 +209,38 @@ def _write_schedule(wb, sdef, rows):
     total_ac_cols = 4 + len(ref_labels)
 
     # Clear old data
-    _clear_data(ws, total_ac_cols)
+    _clear_data(ws, total_ac_cols, ac_start)
 
-    # Write headers at row 4 starting at column N
+    # Write headers at row 4 starting at ac_start
     all_headers = [f[0] for f in CORE_FIELDS] + ref_labels
     for j, header in enumerate(all_headers):
-        col = AC_START + j
+        col = ac_start + j
         cell = ws.cell(row=HEADER_ROW, column=col, value=header)
         cell.font = HEADER_FONT
         cell.fill = HEADER_FILL
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = THIN_BORDER
 
+    # Formula source columns: ac_start+0, +1, +2, +3
+    formula_src = [ac_start + i for i in range(4)]
+
     # Write data rows
     for i, row_data in enumerate(rows):
         row_num = DATA_START + i
 
-        # Core 4 at N, O, P, Q
-        _write_cell(ws, row_num, AC_START + 0, row_data.get('EBIF UID', ''), i)
-        _write_cell(ws, row_num, AC_START + 1, row_data.get('Qty', 1), i)
-        _write_cell(ws, row_num, AC_START + 2, row_data.get('TEAR SHEET #', ''), i)
-        _write_cell(ws, row_num, AC_START + 3, row_data.get('Location', ''), i)
+        # Core 4 at ac_start, +1, +2, +3
+        _write_cell(ws, row_num, ac_start + 0, row_data.get('EBIF UID', ''), i)
+        _write_cell(ws, row_num, ac_start + 1, row_data.get('Qty', 1), i)
+        _write_cell(ws, row_num, ac_start + 2, row_data.get('TEAR SHEET #', ''), i)
+        _write_cell(ws, row_num, ac_start + 3, row_data.get('Location', ''), i)
 
-        # Reference columns at R+
+        # Reference columns after core 4
         for j, lbl in enumerate(ref_labels):
-            col = AC_START + 4 + j
+            col = ac_start + 4 + j
             _write_cell(ws, row_num, col, row_data.get(lbl, ''), i)
 
-        # Formulas in A–D referencing N–Q with consistent light gray background
-        for dest_col, src_col in zip(FORMULA_COLS, FORMULA_SRC_COLS):
+        # Formulas in A–D referencing the core 4 columns
+        for dest_col, src_col in zip(FORMULA_COLS, formula_src):
             src_letter = get_column_letter(src_col)
             cell = ws.cell(row=row_num, column=dest_col, value=f"={src_letter}{row_num}")
             cell.font = BODY_FONT
@@ -231,8 +248,8 @@ def _write_schedule(wb, sdef, rows):
             cell.alignment = Alignment(vertical="center", wrap_text=True)
             cell.fill = LIGHT_GRAY_FILL
 
-    # Auto-fit column widths for Archicad columns (N onward) — don't touch A-M
-    _autofit_archicad_columns(ws, all_headers, rows, ref_labels)
+    # Auto-fit column widths for Archicad columns — don't touch manual columns
+    _autofit_archicad_columns(ws, all_headers, rows, ref_labels, ac_start)
 
 
 def _check_file_lock(xlsm_path):
@@ -315,8 +332,9 @@ def _validate_first_row(wb, sdef, rows):
     if ws is None:
         return f"Validation: sheet not found for '{sname}'"
 
+    ac_start = _get_ac_start(sdef.get('id', ''))
     expected_uid = rows[0].get('EBIF UID', '')
-    actual_uid = ws.cell(row=DATA_START, column=AC_START).value
+    actual_uid = ws.cell(row=DATA_START, column=ac_start).value
 
     if str(actual_uid or '').strip() != str(expected_uid or '').strip():
         msg = f"Validation mismatch in '{sname}': expected EBIF UID '{expected_uid}', got '{actual_uid}'"
@@ -378,15 +396,15 @@ def _remove_legacy_buttons(ws):
                 cell.value = None
 
 
-def _autofit_archicad_columns(ws, all_headers, rows, ref_labels):
-    """Auto-fit column widths for Archicad data columns (N onward).
+def _autofit_archicad_columns(ws, all_headers, rows, ref_labels, ac_start):
+    """Auto-fit column widths for Archicad data columns (ac_start onward).
 
-    Does NOT change any column widths for columns A-M.
-    Column N (EBIF UID) gets a minimum width of 50 units (~350px).
+    Does NOT change any column widths for columns before ac_start.
+    First column (EBIF UID) gets a minimum width of 50 units (~350px).
     Other columns auto-fit based on content with a minimum of 15 units.
     """
     for j, header in enumerate(all_headers):
-        col_idx = AC_START + j
+        col_idx = ac_start + j
         col_letter = get_column_letter(col_idx)
 
         # Calculate max content width: header + data
@@ -445,22 +463,29 @@ def _write_cell(ws, row, col, value, row_index):
     cell.fill = LOCKED_ALT_FILL if row_index % 2 == 0 else LOCKED_FILL
 
 
-def _clear_data(ws, total_ac_cols):
+def _clear_data(ws, total_ac_cols, ac_start):
     """Clear old Archicad data from row 5 downward.
 
-    Clears A–D, L–M (stray), and N onward. NEVER touches E–K.
+    Clears:
+      - A–D (formulas)
+      - Gap columns (from col 12 up to ac_start-1) — clears stray data
+      - ac_start onward (Archicad data)
+    NEVER touches manual columns (E–K, or E–L for Furniture, E–M for Lighting).
     """
     max_row = ws.max_row or DATA_START
     if max_row < DATA_START:
         return
 
-    max_ac_col = AC_START + total_ac_cols
+    max_ac_col = ac_start + total_ac_cols
     furthest = max(max_ac_col, ws.max_column + 1) if ws.max_column else max_ac_col
 
     for row_num in range(DATA_START, max_row + 1):
+        # Clear A–D (formula columns)
         for col in range(1, 5):
             ws.cell(row=row_num, column=col).value = None
-        for col in range(12, 14):
+        # Clear gap columns (between last manual col and ac_start)
+        for col in range(12, ac_start):
             ws.cell(row=row_num, column=col).value = None
-        for col in range(AC_START, furthest):
+        # Clear Archicad data columns
+        for col in range(ac_start, furthest):
             ws.cell(row=row_num, column=col).value = None

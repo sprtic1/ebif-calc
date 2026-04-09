@@ -12,8 +12,12 @@ from openpyxl import load_workbook
 
 logger = logging.getLogger(__name__)
 
-# Column N (14) = EBIF UID — presence indicates a data row
-AC_START = 14
+# EBIF UID column varies per tab (2 cols after last manual column)
+AC_START_DEFAULT = 14  # column N — most tabs
+AC_START_OVERRIDES = {
+    'furniture': 15,            # column O
+    'decorative_lighting': 16,  # column P
+}
 DATA_START = 5
 
 # Schedule tab name mapping (matches schedules.json IDs)
@@ -60,8 +64,9 @@ def read_excel_counts(project_folder):
             counts[sid] = 0
             continue
 
+        ac_col = AC_START_OVERRIDES.get(sid, AC_START_DEFAULT)
         count = 0
-        for row in ws.iter_rows(min_row=DATA_START, min_col=AC_START, max_col=AC_START, values_only=True):
+        for row in ws.iter_rows(min_row=DATA_START, min_col=ac_col, max_col=ac_col, values_only=True):
             if row[0] is not None and str(row[0]).strip():
                 count += 1
             else:
