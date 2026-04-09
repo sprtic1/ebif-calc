@@ -32,6 +32,66 @@ def list_instances():
     return jsonify({'instances': instances})
 
 
+@archicad_bp.route('/api/projects/<project_id>/find-port', methods=['GET'])
+def find_port(project_id):
+    """Scan all Tapir ports and match by project name.
+
+    Returns the matched port, or all instances if no match found.
+    Saves matched port to projects.json for this project.
+    """
+    load_projects, save_projects = _get_helpers()
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Try saved port first
+    saved_port = project.get('last_tapir_port')
+    if saved_port:
+        try:
+            from services.tapir import _probe_port
+            result = _probe_port(saved_port)
+            if result and _names_match(project.get('project_name', ''), result.get('project_name', '')):
+                return jsonify({'matched': True, 'port': saved_port, 'archicad_name': result['project_name']})
+        except Exception:
+            pass
+
+    # Scan all ports
+    try:
+        from services.tapir import scan_instances
+        instances = scan_instances()
+    except Exception as e:
+        return jsonify({'error': f'Scan failed: {e}'}), 500
+
+    if not instances:
+        return jsonify({
+            'matched': False, 'instances': [],
+            'error': "Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!",
+        })
+
+    # Try to match by project name
+    app_name = project.get('project_name', '')
+    for inst in instances:
+        if _names_match(app_name, inst.get('project_name', '')):
+            # Save matched port
+            project['last_tapir_port'] = inst['port']
+            save_projects(projects)
+            return jsonify({'matched': True, 'port': inst['port'], 'archicad_name': inst['project_name']})
+
+    # No match — return all instances for manual selection
+    return jsonify({'matched': False, 'instances': instances})
+
+
+def _names_match(app_name, archicad_name):
+    """Fuzzy match project names: case-insensitive, ignore trailing version numbers."""
+    a = app_name.upper().strip()
+    b = archicad_name.upper().strip()
+    # Strip trailing version number from Archicad name (e.g. " 29", " 28")
+    import re
+    b = re.sub(r'\s+\d+$', '', b)
+    return a == b or a in b or b in a
+
+
 @archicad_bp.route('/api/projects/<project_id>/preview', methods=['GET'])
 def preview_archicad(project_id):
     """Connect to Archicad via Tapir and return element counts per category."""

@@ -180,30 +180,40 @@ function Dashboard() {
     }
   }, [id])
 
-  const scanForInstances = async (preferredPort) => {
+  const scanForPort = async () => {
     try {
-      const res = await fetch('/api/archicad/instances')
+      const res = await fetch(`/api/projects/${id}/find-port`)
       const data = await res.json()
+
+      if (data.matched) {
+        // Auto-matched by project name — proceed directly
+        setSyncStatus('')
+        await fetchPreviewAndRefresh(data.port)
+        return
+      }
+
       if (data.instances && data.instances.length > 0) {
+        // Multiple instances, no auto-match — show selector
         setSyncStatus('')
         if (data.instances.length === 1) {
           await fetchPreviewAndRefresh(data.instances[0].port)
         } else {
-          // Multiple instances — always show selector so user picks the right project
           setInstances(data.instances); setSyncing(false)
         }
         return
       }
     } catch { /* retry */ }
+
+    // No instances found — retry in 5 seconds
     setSyncStatus('Waiting for Tapir...')
-    const timer = setTimeout(() => scanForInstances(null), 5000)
+    const timer = setTimeout(() => scanForPort(), 5000)
     setRetryTimer(timer)
   }
 
   const handleRefreshClick = async () => {
     setSyncing(true); setSyncError(''); setSyncStatus('Scanning...')
     setInstances(null); setPreview(null); setSelectedPort(null)
-    await scanForInstances(project?.last_tapir_port || null)
+    await scanForPort()
   }
 
   const handleInstanceSelect = async (port) => {
