@@ -280,9 +280,10 @@ def extract_text_from_region(img_bgr, bbox):
 
     try:
         text = pytesseract.image_to_string(pil_img, config='--psm 6').strip()
-        # Clean up common OCR artifacts
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip(' |\n\r\t')
+        # Clean up: collapse spaces within each line, preserve line breaks
+        lines = [re.sub(r'[ \t]+', ' ', line).strip(' |') for line in text.splitlines()]
+        lines = [l for l in lines if l]  # remove empty lines
+        text = '\n'.join(lines)
         # Strip trailing punctuation artifacts (colons, periods, semicolons, etc.)
         text = re.sub(r'[.:;,!]+$', '', text).strip()
         return text if text and len(text) > 1 else ''
@@ -345,7 +346,9 @@ def _write_to_excel(wb, tear_sheet_num, extractions):
                                     sheet_name, row, col_idx, str(existing)[:30])
                         continue
 
-                    ws.cell(row=row, column=col_idx, value=text)
+                    cell = ws.cell(row=row, column=col_idx, value=text)
+                    from openpyxl.styles import Alignment
+                    cell.alignment = Alignment(wrap_text=True, vertical="top")
                     written = True
                     logger.info("Wrote '%s' to %s row %d col %d (color=%s)",
                                 text[:30], sheet_name, row, col_idx, color_label)
