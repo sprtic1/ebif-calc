@@ -254,6 +254,40 @@ def refresh_from_excel(project_id):
     })
 
 
+@app.route('/api/projects/<project_id>/export-gc', methods=['POST'])
+def export_gc(project_id):
+    """Generate a GC Package Excel file from the project's schedule data."""
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    try:
+        from services.gc_export import generate_gc_package
+        result = generate_gc_package(project)
+        return jsonify(result)
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Export failed: {e}'}), 500
+
+
+@app.route('/api/projects/<project_id>/open-file', methods=['POST'])
+def open_file(project_id):
+    """Open any file path via os.startfile (Windows)."""
+    data = request.get_json(silent=True) or {}
+    file_path = data.get('path', '')
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
+    try:
+        os.startfile(file_path)
+        return jsonify({'opened': True})
+    except Exception as e:
+        return jsonify({'error': f'Could not open: {e}'}), 500
+
+
 @app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
 def open_excel(project_id):
     """Open the project's Excel schedule file in the default application."""
