@@ -163,11 +163,15 @@ function Dashboard() {
         setSelectedPort(null)
         setWriteProgress(null)
         setWriting(false)
-        setToast(`Success! ${total} items written`)
-        showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated`)
+        const cloudMsg = finalResult.cloud_sync?.ok ? ' \u2014 Cloud synced' : ''
+        setToast(`Success! ${total} items written${cloudMsg}`)
+        showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated${cloudMsg}`)
         playSuccessSound()
         fetchDetails() // Reload enriched data
         if (finalResult.excel_error) setSyncError(`Data synced but: ${finalResult.excel_error}`)
+        if (finalResult.cloud_sync && !finalResult.cloud_sync.ok && finalResult.cloud_sync.message) {
+          setSyncError(prev => prev ? `${prev} | ${finalResult.cloud_sync.message}` : finalResult.cloud_sync.message)
+        }
       } else {
         setSyncError('Refresh completed but no result received'); setWriting(false); setWriteProgress(null); playErrorSound()
       }

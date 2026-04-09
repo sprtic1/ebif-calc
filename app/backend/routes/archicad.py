@@ -229,6 +229,16 @@ def refresh_archicad(project_id):
         if issues:
             response['result']['excel_error'] = ' | '.join(issues)
 
+        # Cloud sync — push dashboard data to DigitalOcean (non-fatal)
+        cloud_ok = False
+        cloud_msg = ''
+        try:
+            from services.cloud_sync import sync_after_refresh
+            cloud_ok, cloud_msg = sync_after_refresh(project)
+        except Exception as e:
+            cloud_msg = f'Cloud sync error: {e}'
+        response['result']['cloud_sync'] = {'ok': cloud_ok, 'message': cloud_msg}
+
         yield _json.dumps(response) + '\n'
 
     return Response(generate(), mimetype='application/x-ndjson')

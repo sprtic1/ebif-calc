@@ -5,5 +5,7 @@
   "projects_folder": "PROJECTS",
   "clickup_api_token": "",
   "clickup_workspace_id": "",
-  "app_port": 5050
+  "app_port": 5050,
+  "cloud_url": "https://apps.ellisid.com",
+  "sync_token": ""
 }
