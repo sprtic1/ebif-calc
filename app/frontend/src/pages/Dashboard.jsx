@@ -270,6 +270,37 @@ function Dashboard() {
     } catch { setSyncError('Tear sheet scan failed'); setScanning(false); setScanProgress(null); playErrorSound() }
   }
 
+  const handleRefreshExcel = async () => {
+    setSyncing(true)
+    setSyncStatus('Reading Excel...')
+    setSyncError('')
+    try {
+      const res = await fetch(`/api/projects/${id}/refresh-excel`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncError(data.error || 'Failed to read Excel')
+        setSyncing(false)
+        playErrorSound()
+        return
+      }
+      setProject(data.project)
+      setDetails(data.schedule_details)
+      setSummary(data.summary)
+      setPullHistory(data.pull_history || [])
+      setSyncing(false)
+      const cloudMsg = data.cloud_sync?.ok ? ' — Cloud synced' : ''
+      setToast(`Excel refreshed! ${data.summary?.total || 0} items${cloudMsg}`)
+      playSuccessSound()
+      if (data.cloud_sync && !data.cloud_sync.ok && data.cloud_sync.message) {
+        setSyncError(data.cloud_sync.message)
+      }
+    } catch {
+      setSyncError('Failed to read Excel file')
+      setSyncing(false)
+      playErrorSound()
+    }
+  }
+
   const handleOpenExcel = async () => {
     try {
       const res = await fetch(`/api/projects/${id}/open-excel`, { method: 'POST' })
@@ -314,9 +345,13 @@ function Dashboard() {
                 Cancel
               </button>
             )}
+            <button onClick={handleRefreshExcel} disabled={syncing || writing}
+              className="bg-sage text-olive font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive hover:text-white transition shadow text-sm disabled:opacity-50">
+              {syncing && syncStatus === 'Reading Excel...' ? 'Reading...' : 'Refresh from Excel'}
+            </button>
             <button onClick={handleRefreshClick} disabled={syncing || writing}
               className="bg-olive text-white font-heading font-bold px-5 py-2 rounded-lg hover:bg-warm-gray transition shadow disabled:opacity-50">
-              {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
+              {syncing && syncStatus !== 'Reading Excel...' ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
             </button>
             <button onClick={handleScanTearSheets} disabled={scanning || syncing || writing}
               className="bg-warm-gray text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50">

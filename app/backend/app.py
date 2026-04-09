@@ -194,6 +194,66 @@ def get_project_details(project_id):
     })
 
 
+@app.route('/api/projects/<project_id>/refresh-excel', methods=['POST'])
+def refresh_from_excel(project_id):
+    """Re-read the Excel file and update dashboard counts + cloud sync.
+
+    Does NOT connect to Archicad — only reads the existing .xlsm file.
+    Fast operation for when designers update manual columns in Excel.
+    """
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    xlsm_path = get_excel_path(project)
+    if not os.path.exists(xlsm_path):
+        return jsonify({'error': 'Excel file not found — please check the project folder.'}), 404
+
+    # Read enriched details from Excel
+    schedule_details = None
+    try:
+        from services.excel_reader import read_excel_details
+        schedule_details = read_excel_details(project)
+    except Exception as e:
+        return jsonify({'error': f'Failed to read Excel: {e}'}), 500
+
+    if schedule_details:
+        # Update stored counts
+        project['schedules'] = {sid: d['count'] for sid, d in schedule_details.items()}
+        total = sum(d['count'] for d in schedule_details.values())
+        complete = sum(d['complete'] for d in schedule_details.values())
+        incomplete = sum(d['incomplete'] for d in schedule_details.values())
+        empty_schedules = sum(1 for d in schedule_details.values() if d['count'] == 0)
+    else:
+        total = complete = incomplete = 0
+        empty_schedules = 16
+
+    save_projects(projects)
+
+    # Cloud sync (non-fatal)
+    cloud_sync_result = {'ok': False, 'message': ''}
+    try:
+        from services.cloud_sync import sync_after_refresh
+        ok, msg = sync_after_refresh(project)
+        cloud_sync_result = {'ok': ok, 'message': msg}
+    except Exception:
+        pass
+
+    return jsonify({
+        'project': project,
+        'schedule_details': schedule_details,
+        'summary': {
+            'total': total,
+            'complete': complete,
+            'incomplete': incomplete,
+            'empty_schedules': empty_schedules,
+        },
+        'pull_history': project.get('pull_history', []),
+        'cloud_sync': cloud_sync_result,
+    })
+
+
 @app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
 def open_excel(project_id):
     """Open the project's Excel schedule file in the default application."""
