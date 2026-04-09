@@ -18,7 +18,7 @@ AC_START_OVERRIDES = {
     'furniture': 15,            # column O
     'decorative_lighting': 16,  # column P
 }
-DATA_START = 5
+DATA_START = 4
 
 # Schedule tab name mapping (matches schedules.json IDs)
 SCHEDULE_TABS = {

@@ -59,8 +59,8 @@ THIN_BORDER = Border(
     bottom=Side(style="thin", color="CCCCCC"),
 )
 
-HEADER_ROW = 4
-DATA_START = 5
+HEADER_ROW = 3
+DATA_START = 4
 
 # Archicad data start column = 2 columns after last manual column.
 # Most tabs: last manual = K(11), so AC starts at N(14).
