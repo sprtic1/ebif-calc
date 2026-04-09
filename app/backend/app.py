@@ -8,10 +8,12 @@ from flask_cors import CORS
 
 from services.template import copy_template, slugify, get_excel_path
 from routes.archicad import archicad_bp
+from routes.tearsheets import tearsheets_bp
 
 app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
 CORS(app)
 app.register_blueprint(archicad_bp)
+app.register_blueprint(tearsheets_bp)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 PROJECTS_FILE = os.path.abspath(os.path.join(DATA_DIR, 'projects.json'))

@@ -68,6 +68,10 @@ function Dashboard() {
   const [btnWidth, setBtnWidth] = useState(0)
   const btnRef = useRef(null)
 
+  // Tear sheet scanner state
+  const [scanning, setScanning] = useState(false)
+  const [scanProgress, setScanProgress] = useState(null)
+
   useEffect(() => {
     if (btnRef.current) setBtnWidth(btnRef.current.offsetWidth)
   })
@@ -270,6 +274,68 @@ function Dashboard() {
     }
   }
 
+  const handleScanTearSheets = async () => {
+    setScanning(true)
+    setSyncError('')
+    setScanProgress({ phase: 'publishing', step: 0, total: 0, pdf: 'Starting...' })
+    try {
+      const res = await fetch(`/api/projects/${id}/scan-tearsheets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: project?.last_tapir_port }),
+      })
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let finalResult = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const msg = JSON.parse(line)
+            if (msg.error) {
+              setSyncError(msg.error)
+              setScanning(false)
+              setScanProgress(null)
+              playErrorSound()
+              return
+            }
+            if (msg.progress) setScanProgress(msg.progress)
+            if (msg.result) finalResult = msg.result
+          } catch { /* skip */ }
+        }
+      }
+
+      if (finalResult) {
+        setScanning(false)
+        setScanProgress(null)
+        const msg = `Processed ${finalResult.processed} tear sheets. Updated ${finalResult.updated} rows. ${finalResult.skipped} skipped.`
+        setToast(msg)
+        showBrowserNotification(msg)
+        playSuccessSound()
+        if (finalResult.errors?.length) {
+          setSyncError(finalResult.errors.join(' | '))
+        }
+      } else {
+        setScanning(false)
+        setScanProgress(null)
+        setSyncError('Scan completed but no result received')
+        playErrorSound()
+      }
+    } catch {
+      setSyncError('Tear sheet scan failed — check console for details')
+      setScanning(false)
+      setScanProgress(null)
+      playErrorSound()
+    }
+  }
+
   const handleOpenExcel = async () => {
     try {
       const res = await fetch(`/api/projects/${id}/open-excel`, { method: 'POST' })
@@ -332,8 +398,53 @@ function Dashboard() {
           >
             Updates the EBIF MASTER TEMPLATE in this project's Dropbox folder, directly from the live Archicad model. The project must be open in Archicad with the Tapir palette running.
           </p>
+          <button
+            onClick={handleScanTearSheets}
+            disabled={scanning || syncing || writing}
+            className="mt-3 bg-warm-gray text-white font-heading font-bold px-5 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50 w-full"
+          >
+            {scanning ? (scanProgress?.phase === 'publishing' ? 'Publishing...' : `Scanning... ${scanProgress?.step || 0}/${scanProgress?.total || 0}`) : 'Scan Tear Sheets'}
+          </button>
+          <p className="text-xs text-warm-gray mt-1 text-center" style={btnWidth ? { maxWidth: btnWidth } : undefined}>
+            Publishes tear sheets from Archicad, then scans highlights to fill in schedule details.
+          </p>
         </div>
       </div>
+
+      {/* Tear sheet scan progress modal */}
+      {scanning && scanProgress && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="font-heading text-xl font-bold text-olive mb-4">
+              {scanProgress.phase === 'publishing' ? 'Publishing Tear Sheets' : 'Scanning Tear Sheets'}
+            </h3>
+            {scanProgress.phase === 'publishing' && (
+              <p className="text-sm text-warm-gray mb-4">Exporting PDFs from Archicad...</p>
+            )}
+            {scanProgress.phase === 'scanning' && scanProgress.total > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-heading text-olive truncate mr-2">
+                    {scanProgress.pdf}
+                  </span>
+                  <span className="text-sm font-heading text-warm-gray whitespace-nowrap">
+                    {scanProgress.step}/{scanProgress.total} ({Math.round((scanProgress.step / scanProgress.total) * 100)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-olive h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${(scanProgress.step / scanProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-warm-gray">
+              Detecting colored highlights and extracting text via OCR...
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Sync error banner */}
       {syncError && (
