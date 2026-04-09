@@ -97,15 +97,15 @@ class FileLockError(Exception):
 
 
 def write_to_master(
-    project_folder,
+    xlsm_path,
     schedules,
     schedule_defs,
     on_progress=None,
 ):
-    """Write Archicad data into the project's EBIF Master Template.xlsm.
+    """Write Archicad data into the project's EBIF schedule file.
 
     Args:
-        project_folder: Full path to the project folder
+        xlsm_path: Full path to the project's .xlsm file
         schedules: dict mapping schedule_id -> list of row dicts
         schedule_defs: list of schedule definition dicts (with resolved column info)
         on_progress: Optional callback(step, total, schedule_name, items_so_far, items_total)
@@ -116,10 +116,8 @@ def write_to_master(
             failed: [schedule_id, ...] — categories that failed (if any)
             warnings: [str, ...] — validation warnings
     """
-    xlsm_path = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
-
     if not os.path.exists(xlsm_path):
-        raise FileNotFoundError(f"EBIF Master Template not found: {xlsm_path}")
+        raise FileNotFoundError(f"Excel file not found: {xlsm_path}")
 
     # Check if file is locked
     _check_file_lock(xlsm_path)

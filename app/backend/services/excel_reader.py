@@ -41,12 +41,16 @@ SCHEDULE_TABS = {
 }
 
 
-def read_excel_counts(project_folder):
+def read_excel_counts(project):
     """Read row counts per schedule tab from the project's Excel file.
+
+    Args:
+        project: Project dict with folder_location, excel_filename, project_name
 
     Returns dict mapping schedule_id -> count, or None if file not found.
     """
-    xlsm_path = os.path.join(project_folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
+    from services.template import get_excel_path
+    xlsm_path = get_excel_path(project)
 
     if not os.path.exists(xlsm_path):
         return None

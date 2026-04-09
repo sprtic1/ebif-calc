@@ -89,7 +89,8 @@ def refresh_archicad(project_id):
 
     # Pre-check: does the Excel file exist?
     import os as _os
-    xlsm_path = _os.path.join(folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
+    from services.template import get_excel_path
+    xlsm_path = get_excel_path(project)
     if not _os.path.exists(xlsm_path):
         return jsonify({'error': 'Excel file not found \u2014 please check the project folder.'}), 404
 
@@ -159,7 +160,7 @@ def refresh_archicad(project_id):
             try:
                 from services.excel_writer import write_to_master, FileLockError
                 write_result[0] = write_to_master(
-                    folder, result['schedules'], result['schedule_defs'],
+                    xlsm_path, result['schedules'], result['schedule_defs'],
                     on_progress=_write_progress,
                 )
             except FileLockError as e:

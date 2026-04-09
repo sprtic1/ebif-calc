@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-from services.template import copy_template, slugify
+from services.template import copy_template, slugify, get_excel_path
 from routes.archicad import archicad_bp
 
 app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
@@ -90,6 +90,7 @@ def create_project():
         'folder_location': folder_location,
         'created_at': datetime.utcnow().isoformat() + 'Z',
         'last_synced': None,
+        'excel_filename': '',
         'schedules': {
             'appliances': 0,
             'bath_accessories': 0,
@@ -112,8 +113,9 @@ def create_project():
 
     # Copy template file (non-fatal if template paths not configured)
     try:
-        template_path = copy_template(folder_location)
+        template_path, excel_fname = copy_template(folder_location, project_name)
         project['template_path'] = template_path
+        project['excel_filename'] = excel_fname
     except Exception as e:
         project['template_path'] = None
         project['template_error'] = str(e)
@@ -133,11 +135,11 @@ def get_project(project_id):
         return jsonify({'error': 'Project not found'}), 404
 
     # Read current Excel row counts to populate dashboard tiles
-    folder = project.get('folder_location', '')
-    if folder:
+    xlsm_path = get_excel_path(project)
+    if xlsm_path and os.path.exists(xlsm_path):
         try:
             from services.excel_reader import read_excel_counts
-            excel_counts = read_excel_counts(folder)
+            excel_counts = read_excel_counts(project)
             if excel_counts:
                 project['schedules'] = excel_counts
         except Exception:
@@ -148,17 +150,16 @@ def get_project(project_id):
 
 @app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
 def open_excel(project_id):
-    """Open the project's EBIF Master Template in the default application."""
+    """Open the project's Excel schedule file in the default application."""
     projects = load_projects()
     project = next((p for p in projects if p['id'] == project_id), None)
     if not project:
         return jsonify({'error': 'Project not found'}), 404
 
-    folder = project.get('folder_location', '')
-    xlsm_path = os.path.join(folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
+    xlsm_path = get_excel_path(project)
 
     if not os.path.exists(xlsm_path):
-        return jsonify({'error': 'Excel file not found — please check the project folder.'}), 404
+        return jsonify({'error': 'Excel file not found \u2014 please check the project folder.'}), 404
 
     try:
         os.startfile(xlsm_path)
