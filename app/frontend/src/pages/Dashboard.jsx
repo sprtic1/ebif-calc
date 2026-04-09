@@ -93,8 +93,8 @@ function Dashboard() {
     }
   }
 
-  const fetchDetails = () => {
-    setLoading(true)
+  const fetchDetails = (silent = false) => {
+    if (!silent) setLoading(true)
     fetch(`/api/projects/${id}/details`)
       .then((res) => {
         if (!res.ok) throw new Error('Project not found')
@@ -108,7 +108,7 @@ function Dashboard() {
         setLoading(false)
       })
       .catch((err) => {
-        setError(err.message)
+        if (!silent) setError(err.message)
         setLoading(false)
       })
   }
@@ -158,7 +158,6 @@ function Dashboard() {
       }
       if (finalResult) {
         const total = finalResult.total || 0
-        setProject(finalResult.project)
         setPreview(null)
         setSelectedPort(null)
         setWriteProgress(null)
@@ -167,7 +166,7 @@ function Dashboard() {
         setToast(`Success! ${total} items written${cloudMsg}`)
         showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated${cloudMsg}`)
         playSuccessSound()
-        fetchDetails() // Reload enriched data
+        fetchDetails(true) // Silent reload — reads fresh counts from Excel
         if (finalResult.excel_error) setSyncError(`Data synced but: ${finalResult.excel_error}`)
         if (finalResult.cloud_sync && !finalResult.cloud_sync.ok && finalResult.cloud_sync.message) {
           setSyncError(prev => prev ? `${prev} | ${finalResult.cloud_sync.message}` : finalResult.cloud_sync.message)
@@ -258,7 +257,7 @@ function Dashboard() {
       if (finalResult) {
         setScanning(false); setScanProgress(null)
         setToast(`Processed ${finalResult.processed} tear sheets. Updated ${finalResult.updated} rows.`)
-        showBrowserNotification(`Tear sheet scan complete`); playSuccessSound(); fetchDetails()
+        showBrowserNotification(`Tear sheet scan complete`); playSuccessSound(); fetchDetails(true)
         if (finalResult.errors?.length) setSyncError(finalResult.errors.join(' | '))
       } else { setScanning(false); setScanProgress(null); setSyncError('Scan completed but no result received'); playErrorSound() }
     } catch { setSyncError('Tear sheet scan failed'); setScanning(false); setScanProgress(null); playErrorSound() }
