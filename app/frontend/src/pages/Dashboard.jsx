@@ -38,21 +38,25 @@ function playTone(frequency, duration, type = 'sine') {
 }
 
 function playSuccessSound() {
-  playTone(523, 0.15)  // C5
-  setTimeout(() => playTone(659, 0.15), 150) // E5
-  setTimeout(() => playTone(784, 0.3), 300)  // G5
+  playTone(523, 0.15)
+  setTimeout(() => playTone(659, 0.15), 150)
+  setTimeout(() => playTone(784, 0.3), 300)
 }
 
 function playErrorSound() {
-  playTone(330, 0.25, 'square') // E4 buzzy
-  setTimeout(() => playTone(262, 0.4, 'square'), 300) // C4 buzzy
+  playTone(330, 0.25, 'square')
+  setTimeout(() => playTone(262, 0.4, 'square'), 300)
 }
 
 function Dashboard() {
   const { id } = useParams()
   const [project, setProject] = useState(null)
+  const [details, setDetails] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const [pullHistory, setPullHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [expandedTile, setExpandedTile] = useState(null)
 
   // Archicad sync state
   const [syncing, setSyncing] = useState(false)
@@ -65,25 +69,17 @@ function Dashboard() {
   const [writeProgress, setWriteProgress] = useState(null)
   const [retryTimer, setRetryTimer] = useState(null)
   const [toast, setToast] = useState(null)
-  const [btnWidth, setBtnWidth] = useState(0)
-  const btnRef = useRef(null)
 
   // Tear sheet scanner state
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(null)
 
   useEffect(() => {
-    if (btnRef.current) setBtnWidth(btnRef.current.offsetWidth)
-  })
-
-  // Request notification permission on mount
-  useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
   }, [])
 
-  // Auto-dismiss toast after 4 seconds
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(null), 4000)
@@ -97,15 +93,18 @@ function Dashboard() {
     }
   }
 
-  const fetchProject = () => {
+  const fetchDetails = () => {
     setLoading(true)
-    fetch(`/api/projects/${id}`)
+    fetch(`/api/projects/${id}/details`)
       .then((res) => {
         if (!res.ok) throw new Error('Project not found')
         return res.json()
       })
       .then((data) => {
-        setProject(data)
+        setProject(data.project)
+        setDetails(data.schedule_details)
+        setSummary(data.summary)
+        setPullHistory(data.pull_history || [])
         setLoading(false)
       })
       .catch((err) => {
@@ -115,7 +114,7 @@ function Dashboard() {
   }
 
   useEffect(() => {
-    fetchProject()
+    fetchDetails()
   }, [id])
 
   const cancelRetry = () => {
@@ -127,7 +126,6 @@ function Dashboard() {
     setSyncStatus('')
   }
 
-  // Auto-start refresh when preview loads
   const doRefresh = useCallback(async (port) => {
     setWriting(true)
     setSyncError('')
@@ -138,12 +136,10 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port }),
       })
-
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       let finalResult = null
-
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -154,25 +150,12 @@ function Dashboard() {
           if (!line.trim()) continue
           try {
             const msg = JSON.parse(line)
-            if (msg.error) {
-              setSyncError(msg.error)
-              setWriting(false)
-              setWriteProgress(null)
-              playErrorSound()
-              return
-            }
-            if (msg.progress) {
-              setWriteProgress(msg.progress)
-            }
-            if (msg.result) {
-              finalResult = msg.result
-            }
-          } catch {
-            // skip malformed lines
-          }
+            if (msg.error) { setSyncError(msg.error); setWriting(false); setWriteProgress(null); playErrorSound(); return }
+            if (msg.progress) setWriteProgress(msg.progress)
+            if (msg.result) finalResult = msg.result
+          } catch { /* skip */ }
         }
       }
-
       if (finalResult) {
         const total = finalResult.total || 0
         setProject(finalResult.project)
@@ -183,20 +166,14 @@ function Dashboard() {
         setToast(`Success! ${total} items written`)
         showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated`)
         playSuccessSound()
-        if (finalResult.excel_error) {
-          setSyncError(`Data synced but: ${finalResult.excel_error}`)
-        }
+        fetchDetails() // Reload enriched data
+        if (finalResult.excel_error) setSyncError(`Data synced but: ${finalResult.excel_error}`)
       } else {
-        setSyncError('Refresh completed but no result received')
-        setWriting(false)
-        setWriteProgress(null)
-        playErrorSound()
+        setSyncError('Refresh completed but no result received'); setWriting(false); setWriteProgress(null); playErrorSound()
       }
     } catch {
       setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
-      setWriting(false)
-      setWriteProgress(null)
-      playErrorSound()
+      setWriting(false); setWriteProgress(null); playErrorSound()
     }
   }, [id])
 
@@ -204,249 +181,159 @@ function Dashboard() {
     try {
       const res = await fetch('/api/archicad/instances')
       const data = await res.json()
-
       if (data.instances && data.instances.length > 0) {
         setSyncStatus('')
         if (data.instances.length === 1) {
           await fetchPreviewAndRefresh(data.instances[0].port)
         } else {
-          // If preferred port is in the list and only wanting quick reconnect
           if (preferredPort) {
             const preferred = data.instances.find(i => i.port === preferredPort)
-            if (preferred) {
-              await fetchPreviewAndRefresh(preferred.port)
-              return
-            }
+            if (preferred) { await fetchPreviewAndRefresh(preferred.port); return }
           }
-          setInstances(data.instances)
-          setSyncing(false)
+          setInstances(data.instances); setSyncing(false)
         }
         return
       }
-    } catch {
-      // Network error — keep retrying
-    }
-
-    // No instances found — retry in 5 seconds
+    } catch { /* retry */ }
     setSyncStatus('Waiting for Tapir...')
     const timer = setTimeout(() => scanForInstances(null), 5000)
     setRetryTimer(timer)
   }
 
   const handleRefreshClick = async () => {
-    setSyncing(true)
-    setSyncError('')
-    setSyncStatus('Scanning...')
-    setInstances(null)
-    setPreview(null)
-    setSelectedPort(null)
-    const preferredPort = project?.last_tapir_port || null
-    await scanForInstances(preferredPort)
+    setSyncing(true); setSyncError(''); setSyncStatus('Scanning...')
+    setInstances(null); setPreview(null); setSelectedPort(null)
+    await scanForInstances(project?.last_tapir_port || null)
   }
 
   const handleInstanceSelect = async (port) => {
-    setInstances(null)
-    setSyncing(true)
+    setInstances(null); setSyncing(true)
     await fetchPreviewAndRefresh(port)
   }
 
   const fetchPreviewAndRefresh = async (port) => {
-    setSelectedPort(port)
-    setSyncStatus('Loading preview...')
+    setSelectedPort(port); setSyncStatus('Loading preview...')
     try {
       const res = await fetch(`/api/projects/${id}/preview?port=${port}`)
       const data = await res.json()
-      if (!res.ok) {
-        setSyncError(data.error || 'Preview failed')
-        setSyncing(false)
-        playErrorSound()
-        return
-      }
-      setSyncError('')
-      setPreview(data)
-      setSyncing(false)
-      // Auto-start the refresh immediately
+      if (!res.ok) { setSyncError(data.error || 'Preview failed'); setSyncing(false); playErrorSound(); return }
+      setSyncError(''); setPreview(data); setSyncing(false)
       await doRefresh(port)
     } catch {
       setSyncError("Please make sure the Tapir palette is open in your running Archicad session, then hit the 'Refresh from Archicad' button again!")
-      setSyncing(false)
-      playErrorSound()
+      setSyncing(false); playErrorSound()
     }
   }
 
   const handleScanTearSheets = async () => {
-    setScanning(true)
-    setSyncError('')
+    setScanning(true); setSyncError('')
     setScanProgress({ phase: 'publishing', step: 0, total: 0, pdf: 'Starting...' })
     try {
       const res = await fetch(`/api/projects/${id}/scan-tearsheets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port: project?.last_tapir_port }),
       })
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
-      let finalResult = null
-
+      let buffer = '', finalResult = null
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop()
+        const lines = buffer.split('\n'); buffer = lines.pop()
         for (const line of lines) {
           if (!line.trim()) continue
           try {
             const msg = JSON.parse(line)
-            if (msg.error) {
-              setSyncError(msg.error)
-              setScanning(false)
-              setScanProgress(null)
-              playErrorSound()
-              return
-            }
+            if (msg.error) { setSyncError(msg.error); setScanning(false); setScanProgress(null); playErrorSound(); return }
             if (msg.progress) setScanProgress(msg.progress)
             if (msg.result) finalResult = msg.result
           } catch { /* skip */ }
         }
       }
-
       if (finalResult) {
-        setScanning(false)
-        setScanProgress(null)
-        const msg = `Processed ${finalResult.processed} tear sheets. Updated ${finalResult.updated} rows. ${finalResult.skipped} skipped.`
-        setToast(msg)
-        showBrowserNotification(msg)
-        playSuccessSound()
-        if (finalResult.errors?.length) {
-          setSyncError(finalResult.errors.join(' | '))
-        }
-      } else {
-        setScanning(false)
-        setScanProgress(null)
-        setSyncError('Scan completed but no result received')
-        playErrorSound()
-      }
-    } catch {
-      setSyncError('Tear sheet scan failed — check console for details')
-      setScanning(false)
-      setScanProgress(null)
-      playErrorSound()
-    }
+        setScanning(false); setScanProgress(null)
+        setToast(`Processed ${finalResult.processed} tear sheets. Updated ${finalResult.updated} rows.`)
+        showBrowserNotification(`Tear sheet scan complete`); playSuccessSound(); fetchDetails()
+        if (finalResult.errors?.length) setSyncError(finalResult.errors.join(' | '))
+      } else { setScanning(false); setScanProgress(null); setSyncError('Scan completed but no result received'); playErrorSound() }
+    } catch { setSyncError('Tear sheet scan failed'); setScanning(false); setScanProgress(null); playErrorSound() }
   }
 
   const handleOpenExcel = async () => {
     try {
       const res = await fetch(`/api/projects/${id}/open-excel`, { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) {
-        setSyncError(data.error || 'Could not open Excel')
-      }
-    } catch {
-      setSyncError('Could not open Excel file')
-    }
+      if (!res.ok) setSyncError(data.error || 'Could not open Excel')
+    } catch { setSyncError('Could not open Excel file') }
   }
 
-  if (loading) return <p className="text-warm-gray">Loading...</p>
-  if (error) return <p className="text-red-600">{error}</p>
-  if (!project) return <p className="text-warm-gray">Project not found.</p>
+  if (loading) return <p className="text-warm-gray p-8">Loading...</p>
+  if (error) return <p className="text-red-600 p-8">{error}</p>
+  if (!project) return <p className="text-warm-gray p-8">Project not found.</p>
 
-  const schedules = project.schedules || {}
-  const totalItems = Object.values(schedules).reduce((a, b) => a + b, 0)
+  const s = summary || { total: 0, complete: 0, incomplete: 0, empty_schedules: 16 }
+  const d = details || {}
 
   return (
     <div>
-      {/* Success toast */}
+      {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-50 bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg shadow-lg animate-fade-in">
+        <div className="fixed top-6 right-6 z-50 bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg shadow-lg">
           {toast}
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <Link to="/" className="text-olive hover:underline text-sm font-heading mb-1 inline-block">
-            &larr; All Projects
-          </Link>
-          <h2 className="font-heading text-2xl font-bold text-olive">{project.project_name}</h2>
-          {project.client_name && <p className="text-warm-gray">{project.client_name}</p>}
-          {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-3">
+      {/* ===== 1. HEADER ===== */}
+      <div className="mb-6">
+        <Link to="/" className="text-olive hover:underline text-sm font-heading mb-1 inline-block">
+          &larr; All Projects
+        </Link>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="font-heading text-3xl font-bold text-olive">{project.project_name}</h1>
+            {project.client_name && <p className="text-warm-gray text-lg">{project.client_name}</p>}
+            {project.address && <p className="text-sm text-sage font-heading">{project.address}</p>}
+            <p className="text-xs text-warm-gray mt-1">
+              Last synced: {project.last_synced ? new Date(project.last_synced).toLocaleString() : 'Never'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             {syncing && syncStatus && (
-              <button
-                onClick={cancelRetry}
-                className="text-warm-gray font-heading font-bold px-4 py-3 rounded-lg hover:text-red-600 transition text-sm"
-              >
+              <button onClick={cancelRetry} className="text-warm-gray font-heading font-bold px-3 py-2 rounded hover:text-red-600 transition text-sm">
                 Cancel
               </button>
             )}
-            <button
-              ref={btnRef}
-              onClick={handleRefreshClick}
-              disabled={syncing || writing}
-              className="bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg hover:bg-warm-gray transition shadow-md text-lg disabled:opacity-50"
-            >
+            <button onClick={handleRefreshClick} disabled={syncing || writing}
+              className="bg-olive text-white font-heading font-bold px-5 py-2 rounded-lg hover:bg-warm-gray transition shadow disabled:opacity-50">
               {syncing ? (syncStatus || 'Scanning...') : 'Refresh from Archicad'}
             </button>
+            <button onClick={handleScanTearSheets} disabled={scanning || syncing || writing}
+              className="bg-warm-gray text-white font-heading font-bold px-4 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50">
+              {scanning ? 'Scanning...' : 'Scan Tear Sheets'}
+            </button>
+            <button type="button" onClick={handleOpenExcel} title="Open in Excel"
+              className="text-olive hover:text-warm-gray transition cursor-pointer p-2 rounded hover:bg-gray-100">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="8" y1="13" x2="16" y2="13" />
+                <line x1="8" y1="17" x2="16" y2="17" />
+              </svg>
+            </button>
+            <button disabled title="Export (coming soon)"
+              className="text-gray-300 p-2 rounded cursor-not-allowed">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
           </div>
-          <p
-            className="text-xs text-warm-gray mt-2 text-center"
-            style={btnWidth ? { maxWidth: btnWidth } : undefined}
-          >
-            Updates the EBIF MASTER TEMPLATE in this project's Dropbox folder, directly from the live Archicad model. The project must be open in Archicad with the Tapir palette running.
-          </p>
-          <button
-            onClick={handleScanTearSheets}
-            disabled={scanning || syncing || writing}
-            className="mt-3 bg-warm-gray text-white font-heading font-bold px-5 py-2 rounded-lg hover:bg-olive transition shadow text-sm disabled:opacity-50 w-full"
-          >
-            {scanning ? (scanProgress?.phase === 'publishing' ? 'Publishing...' : `Scanning... ${scanProgress?.step || 0}/${scanProgress?.total || 0}`) : 'Scan Tear Sheets'}
-          </button>
-          <p className="text-xs text-warm-gray mt-1 text-center" style={btnWidth ? { maxWidth: btnWidth } : undefined}>
-            Publishes tear sheets from Archicad, then scans highlights to fill in schedule details.
-          </p>
         </div>
       </div>
 
-      {/* Tear sheet scan progress modal */}
-      {scanning && scanProgress && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <h3 className="font-heading text-xl font-bold text-olive mb-4">
-              {scanProgress.phase === 'publishing' ? 'Publishing Tear Sheets' : 'Scanning Tear Sheets'}
-            </h3>
-            {scanProgress.phase === 'publishing' && (
-              <p className="text-sm text-warm-gray mb-4">Exporting PDFs from Archicad...</p>
-            )}
-            {scanProgress.phase === 'scanning' && scanProgress.total > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-heading text-olive truncate mr-2">
-                    {scanProgress.pdf}
-                  </span>
-                  <span className="text-sm font-heading text-warm-gray whitespace-nowrap">
-                    {scanProgress.step}/{scanProgress.total} ({Math.round((scanProgress.step / scanProgress.total) * 100)}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-olive h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${(scanProgress.step / scanProgress.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-            <p className="text-xs text-warm-gray">
-              Detecting colored highlights and extracting text via OCR...
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Sync error banner */}
+      {/* Error banner */}
       {syncError && (
         <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
           {syncError}
@@ -454,159 +341,198 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Instance selector modal */}
+      {/* ===== 2. SUMMARY CARDS ===== */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4 text-center border-t-4 border-olive">
+          <p className="font-heading font-bold text-3xl text-olive">{s.total}</p>
+          <p className="text-sm font-heading text-warm-gray">Total Items</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center border-t-4 border-olive">
+          <p className="font-heading font-bold text-3xl text-olive">{s.complete}</p>
+          <p className="text-sm font-heading text-warm-gray">Complete</p>
+        </div>
+        <div className={`bg-white rounded-lg shadow p-4 text-center border-t-4 ${s.incomplete > 0 ? 'border-yellow-500' : 'border-olive'}`}>
+          <p className={`font-heading font-bold text-3xl ${s.incomplete > 0 ? 'text-yellow-600' : 'text-olive'}`}>{s.incomplete}</p>
+          <p className="text-sm font-heading text-warm-gray">Needs Attention</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center border-t-4 border-gray-200">
+          <p className="font-heading font-bold text-3xl text-gray-400">{s.empty_schedules}</p>
+          <p className="text-sm font-heading text-warm-gray">Empty Schedules</p>
+        </div>
+      </div>
+
+      {/* ===== 3. SCHEDULE TILES ===== */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+        {Object.entries(SCHEDULE_LABELS).map(([key, label]) => {
+          const sd = d[key] || { count: 0, complete: 0, incomplete: 0, rows: [] }
+          const count = sd.count
+          // Color: green if all complete, yellow if incomplete, gray if empty
+          let borderColor = 'border-gray-200'
+          let countColor = 'text-gray-300'
+          let labelColor = 'text-gray-400'
+          if (count > 0 && sd.incomplete === 0) {
+            borderColor = 'border-olive'; countColor = 'text-olive'; labelColor = 'text-warm-gray'
+          } else if (count > 0) {
+            borderColor = 'border-yellow-500'; countColor = 'text-yellow-600'; labelColor = 'text-warm-gray'
+          }
+          const isExpanded = expandedTile === key
+
+          return (
+            <div key={key}>
+              <div
+                onClick={() => setExpandedTile(isExpanded ? null : key)}
+                className={`bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition cursor-pointer border-t-4 ${borderColor}`}
+              >
+                <p className={`font-heading font-bold text-3xl mb-1 ${countColor}`}>{count}</p>
+                <p className={`text-sm font-heading ${labelColor}`}>{label}</p>
+                {count > 0 && sd.incomplete > 0 && (
+                  <p className="text-xs text-yellow-600 mt-1">{sd.incomplete} incomplete</p>
+                )}
+              </div>
+              {/* Expanded row detail */}
+              {isExpanded && sd.rows.length > 0 && (
+                <div className="bg-white rounded-b-lg shadow-inner border-x border-b border-gray-200 p-3 -mt-1">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-warm-gray font-heading">
+                        <th className="text-left pb-1">TS#</th>
+                        <th className="text-left pb-1">Location</th>
+                        <th className="text-left pb-1">Manufacturer</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sd.rows.slice(0, 20).map((row, i) => (
+                        <tr key={i} className={i % 2 === 0 ? 'bg-light-sage' : ''}>
+                          <td className="py-0.5 pr-2 font-mono">{row.tear_sheet || '\u2014'}</td>
+                          <td className="py-0.5 pr-2">{row.location || '\u2014'}</td>
+                          <td className={`py-0.5 ${row.manufacturer ? 'text-olive font-bold' : 'text-gray-300 italic'}`}>
+                            {row.manufacturer || 'empty'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {sd.rows.length > 20 && (
+                    <p className="text-xs text-warm-gray mt-1 text-center">+ {sd.rows.length - 20} more rows</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ===== 4. PULL HISTORY ===== */}
+      {pullHistory.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="font-heading font-bold text-olive mb-3">Pull History</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-warm-gray font-heading border-b border-gray-200">
+                <th className="text-left pb-2">Date</th>
+                <th className="text-right pb-2">Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...pullHistory].reverse().map((entry, i) => (
+                <tr key={i} className={i % 2 === 0 ? 'bg-light-sage' : ''}>
+                  <td className="py-1.5">{new Date(entry.timestamp).toLocaleString()}</td>
+                  <td className="py-1.5 text-right font-heading font-bold text-olive">{entry.total}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ===== MODALS (preserved from existing) ===== */}
+
+      {/* Instance selector */}
       {instances && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <h3 className="font-heading text-xl font-bold text-olive mb-2">
-              Multiple Archicad Instances Found
-            </h3>
-            <p className="text-sm text-warm-gray mb-6">
-              Select which project to pull data from:
-            </p>
+            <h3 className="font-heading text-xl font-bold text-olive mb-2">Multiple Archicad Instances Found</h3>
+            <p className="text-sm text-warm-gray mb-6">Select which project to pull data from:</p>
             <div className="space-y-3 mb-6">
               {instances.map((inst) => (
-                <button
-                  key={inst.port}
-                  onClick={() => handleInstanceSelect(inst.port)}
-                  className="w-full text-left bg-light-sage hover:bg-sage rounded-lg p-4 transition border border-sage"
-                >
+                <button key={inst.port} onClick={() => handleInstanceSelect(inst.port)}
+                  className="w-full text-left bg-light-sage hover:bg-sage rounded-lg p-4 transition border border-sage">
                   <p className="font-heading font-bold text-olive">{inst.project_name}</p>
-                  <p className="text-xs text-warm-gray mt-1">
-                    Port {inst.port} &middot; Archicad {inst.version}
-                  </p>
+                  <p className="text-xs text-warm-gray mt-1">Port {inst.port} &middot; Archicad {inst.version}</p>
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setInstances(null)}
-              className="w-full bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition"
-            >
-              Cancel
-            </button>
+            <button onClick={() => setInstances(null)}
+              className="w-full bg-gray-200 text-warm-gray font-heading font-bold py-3 rounded-lg hover:bg-gray-300 transition">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Progress modal — shows preview counts + live progress */}
+      {/* Archicad sync progress */}
       {preview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4">
-            <h3 className="font-heading text-xl font-bold text-olive mb-4">
-              Archicad Sync — {preview.total} elements
-            </h3>
+            <h3 className="font-heading text-xl font-bold text-olive mb-4">Archicad Sync — {preview.total} elements</h3>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-6">
               {Object.entries(SCHEDULE_LABELS).map(([key, label]) => {
                 const count = preview.counts?.[key] || 0
                 return (
                   <div key={key} className="flex justify-between items-center py-1 border-b border-gray-100">
                     <span className="text-warm-gray font-heading text-sm">{label}</span>
-                    <span className={`font-heading font-bold text-sm ${count > 0 ? 'text-olive' : 'text-gray-300'}`}>
-                      {count}
-                    </span>
+                    <span className={`font-heading font-bold text-sm ${count > 0 ? 'text-olive' : 'text-gray-300'}`}>{count}</span>
                   </div>
                 )
               })}
             </div>
-
-            {/* Progress bar */}
             {writing && writeProgress && (() => {
               const phase = writeProgress.phase === 'extracting' ? 'Extracting' : 'Writing'
               const hasItems = writeProgress.items_total != null && writeProgress.items_total > 0
-              const barPct = hasItems
-                ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100)
-                : Math.round((writeProgress.step / writeProgress.total) * 100)
+              const barPct = hasItems ? Math.round((writeProgress.items_so_far / writeProgress.items_total) * 100) : Math.round((writeProgress.step / writeProgress.total) * 100)
               return (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-heading text-olive">
-                      {phase} {writeProgress.category}...
-                    </span>
+                    <span className="text-sm font-heading text-olive">{phase} {writeProgress.category}...</span>
                     <span className="text-sm font-heading text-warm-gray">
-                      {hasItems
-                        ? `${writeProgress.items_so_far}/${writeProgress.items_total} items (${barPct}%)`
-                        : writeProgress.items_so_far > 0
-                          ? `${writeProgress.items_so_far} items (${barPct}%)`
-                          : `${writeProgress.step}/${writeProgress.total} (${barPct}%)`
-                      }
+                      {hasItems ? `${writeProgress.items_so_far}/${writeProgress.items_total} items (${barPct}%)` : `${writeProgress.step}/${writeProgress.total} (${barPct}%)`}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-olive h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${barPct}%` }}
-                    />
+                    <div className="bg-olive h-3 rounded-full transition-all duration-300" style={{ width: `${barPct}%` }} />
                   </div>
                 </div>
               )
             })()}
-
-            {writing && !writeProgress && (
-              <div className="mb-4">
-                <p className="text-sm font-heading text-olive">Connecting to Archicad...</p>
-              </div>
-            )}
-
-            <p className="text-xs text-warm-gray">
-              Writing Archicad data into the EBIF Master Template. Manual columns will NOT be touched.
-            </p>
+            {writing && !writeProgress && <p className="text-sm font-heading text-olive mb-4">Connecting to Archicad...</p>}
+            <p className="text-xs text-warm-gray">Writing Archicad data. Manual columns will NOT be touched.</p>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between text-sm">
-        <span className="text-warm-gray">
-          Last synced:{' '}
-          {project.last_synced
-            ? new Date(project.last_synced).toLocaleString()
-            : 'Never'}
-        </span>
-        <div className="flex items-center gap-4">
-          <span className="text-olive font-bold">
-            {totalItems} total items
-          </span>
-          <button
-            type="button"
-            onClick={handleOpenExcel}
-            className="text-olive hover:text-warm-gray transition cursor-pointer p-1 rounded hover:bg-gray-100"
-            title="Open in Excel"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="8" y1="13" x2="16" y2="13" />
-              <line x1="8" y1="17" x2="16" y2="17" />
-              <line x1="10" y1="9" x2="8" y2="9" />
-            </svg>
-          </button>
+      {/* Tear sheet scan progress */}
+      {scanning && scanProgress && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="font-heading text-xl font-bold text-olive mb-4">
+              {scanProgress.phase === 'publishing' ? 'Publishing Tear Sheets' : 'Scanning Tear Sheets'}
+            </h3>
+            {scanProgress.phase === 'publishing' && <p className="text-sm text-warm-gray mb-4">Exporting PDFs from Archicad...</p>}
+            {scanProgress.phase === 'scanning' && scanProgress.total > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-heading text-olive truncate mr-2">{scanProgress.pdf}</span>
+                  <span className="text-sm font-heading text-warm-gray whitespace-nowrap">
+                    {scanProgress.step}/{scanProgress.total} ({Math.round((scanProgress.step / scanProgress.total) * 100)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="bg-olive h-3 rounded-full transition-all duration-300" style={{ width: `${(scanProgress.step / scanProgress.total) * 100}%` }} />
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-warm-gray">Detecting colored highlights and extracting text via OCR...</p>
+          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {Object.entries(SCHEDULE_LABELS).map(([key, label]) => {
-          const count = schedules[key] || 0
-          const populated = count > 0
-          return (
-            <div
-              key={key}
-              className={`bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition ${
-                populated ? 'border-t-4 border-olive' : 'border-t-4 border-gray-200'
-              }`}
-            >
-              <p className={`font-heading font-bold text-3xl mb-1 ${
-                populated ? 'text-olive' : 'text-gray-300'
-              }`}>
-                {count}
-              </p>
-              <p className={`text-sm font-heading ${
-                populated ? 'text-warm-gray' : 'text-gray-400'
-              }`}>
-                {label}
-              </p>
-            </div>
-          )
-        })}
-      </div>
+      )}
     </div>
   )
 }

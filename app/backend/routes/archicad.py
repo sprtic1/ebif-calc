@@ -192,6 +192,15 @@ def refresh_archicad(project_id):
         project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
         if port:
             project['last_tapir_port'] = port
+
+        # Append to pull history (keep last 5)
+        history = project.get('pull_history', [])
+        history.append({
+            'timestamp': project['last_synced'],
+            'total': result.get('total', 0),
+        })
+        project['pull_history'] = history[-5:]
+
         save_projects(projects)
 
         # Build response with failure details

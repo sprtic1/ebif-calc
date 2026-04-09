@@ -150,6 +150,48 @@ def get_project(project_id):
     return jsonify(project)
 
 
+@app.route('/api/projects/<project_id>/details', methods=['GET'])
+def get_project_details(project_id):
+    """Return enriched dashboard data with per-schedule completeness and row detail."""
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    schedule_details = None
+    try:
+        from services.excel_reader import read_excel_details
+        schedule_details = read_excel_details(project)
+    except Exception as e:
+        pass
+
+    if schedule_details:
+        total = sum(d['count'] for d in schedule_details.values())
+        complete = sum(d['complete'] for d in schedule_details.values())
+        incomplete = sum(d['incomplete'] for d in schedule_details.values())
+        empty_schedules = sum(1 for d in schedule_details.values() if d['count'] == 0)
+    else:
+        schedules = project.get('schedules', {})
+        total = sum(schedules.values())
+        complete = 0
+        incomplete = total
+        empty_schedules = sum(1 for v in schedules.values() if v == 0)
+        schedule_details = {sid: {'count': c, 'complete': 0, 'incomplete': c, 'rows': []}
+                           for sid, c in schedules.items()}
+
+    return jsonify({
+        'project': project,
+        'schedule_details': schedule_details,
+        'summary': {
+            'total': total,
+            'complete': complete,
+            'incomplete': incomplete,
+            'empty_schedules': empty_schedules,
+        },
+        'pull_history': project.get('pull_history', []),
+    })
+
+
 @app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
 def open_excel(project_id):
     """Open the project's Excel schedule file in the default application."""
