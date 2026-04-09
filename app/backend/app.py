@@ -131,7 +131,40 @@ def get_project(project_id):
     project = next((p for p in projects if p['id'] == project_id), None)
     if not project:
         return jsonify({'error': 'Project not found'}), 404
+
+    # Read current Excel row counts to populate dashboard tiles
+    folder = project.get('folder_location', '')
+    if folder:
+        try:
+            from services.excel_reader import read_excel_counts
+            excel_counts = read_excel_counts(folder)
+            if excel_counts:
+                project['schedules'] = excel_counts
+        except Exception:
+            pass  # Fall back to stored counts
+
     return jsonify(project)
+
+
+@app.route('/api/projects/<project_id>/open-excel', methods=['POST'])
+def open_excel(project_id):
+    """Open the project's EBIF Master Template in the default application."""
+    projects = load_projects()
+    project = next((p for p in projects if p['id'] == project_id), None)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    folder = project.get('folder_location', '')
+    xlsm_path = os.path.join(folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
+
+    if not os.path.exists(xlsm_path):
+        return jsonify({'error': 'Excel file not found — please check the project folder.'}), 404
+
+    try:
+        os.startfile(xlsm_path)
+        return jsonify({'opened': True, 'path': xlsm_path})
+    except Exception as e:
+        return jsonify({'error': f'Could not open file: {e}'}), 500
 
 
 # ---------- Frontend (production) ----------

@@ -36,12 +36,34 @@ function Dashboard() {
   const [writing, setWriting] = useState(false)
   const [writeProgress, setWriteProgress] = useState(null)
   const [retryTimer, setRetryTimer] = useState(null)
+  const [toast, setToast] = useState(null)
   const [btnWidth, setBtnWidth] = useState(0)
   const btnRef = useRef(null)
 
   useEffect(() => {
     if (btnRef.current) setBtnWidth(btnRef.current.offsetWidth)
   })
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 4000)
+      return () => clearTimeout(t)
+    }
+  }, [toast])
+
+  const showBrowserNotification = (message) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('EID Project Manager', { body: message })
+    }
+  }
 
   const fetchProject = () => {
     setLoading(true)
@@ -73,29 +95,56 @@ function Dashboard() {
     setSyncStatus('')
   }
 
-  const scanForInstances = async () => {
-    try {
-      const res = await fetch('/api/archicad/instances')
-      const data = await res.json()
-
-      if (data.instances && data.instances.length > 0) {
-        // Found instances — stop retrying
-        setSyncStatus('')
-        if (data.instances.length === 1) {
-          await fetchPreview(data.instances[0].port)
-        } else {
-          setInstances(data.instances)
-          setSyncing(false)
+  const scanForInstances = async (preferredPort) => {
+    // Try preferred port first (last successful port)
+    if (preferredPort) {
+      try {
+        const res = await fetch('/api/archicad/instances')
+        const data = await res.json()
+        if (data.instances && data.instances.length > 0) {
+          const preferred = data.instances.find(i => i.port === preferredPort)
+          if (preferred && data.instances.length === 1) {
+            setSyncStatus('')
+            await fetchPreview(preferred.port)
+            return
+          }
+          if (data.instances.length > 0) {
+            setSyncStatus('')
+            if (data.instances.length === 1) {
+              await fetchPreview(data.instances[0].port)
+            } else {
+              setInstances(data.instances)
+              setSyncing(false)
+            }
+            return
+          }
         }
-        return
+      } catch {
+        // fall through to retry
       }
-    } catch {
-      // Network error — keep retrying
+    } else {
+      try {
+        const res = await fetch('/api/archicad/instances')
+        const data = await res.json()
+
+        if (data.instances && data.instances.length > 0) {
+          setSyncStatus('')
+          if (data.instances.length === 1) {
+            await fetchPreview(data.instances[0].port)
+          } else {
+            setInstances(data.instances)
+            setSyncing(false)
+          }
+          return
+        }
+      } catch {
+        // Network error — keep retrying
+      }
     }
 
     // No instances found — retry in 5 seconds
     setSyncStatus('Waiting for Tapir...')
-    const timer = setTimeout(() => scanForInstances(), 5000)
+    const timer = setTimeout(() => scanForInstances(null), 5000)
     setRetryTimer(timer)
   }
 
@@ -106,7 +155,8 @@ function Dashboard() {
     setInstances(null)
     setPreview(null)
     setSelectedPort(null)
-    await scanForInstances()
+    const preferredPort = project?.last_tapir_port || null
+    await scanForInstances(preferredPort)
   }
 
   const handleInstanceSelect = async (port) => {
@@ -145,7 +195,6 @@ function Dashboard() {
         body: JSON.stringify({ port: selectedPort }),
       })
 
-      // Read newline-delimited JSON stream for progress updates
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
@@ -156,7 +205,7 @@ function Dashboard() {
         if (done) break
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop() // keep incomplete line in buffer
+        buffer = lines.pop()
         for (const line of lines) {
           if (!line.trim()) continue
           try {
@@ -180,13 +229,16 @@ function Dashboard() {
       }
 
       if (finalResult) {
+        const total = finalResult.total || 0
         setProject(finalResult.project)
         setPreview(null)
         setSelectedPort(null)
         setWriteProgress(null)
         setWriting(false)
+        setToast(`Success! ${total} items written`)
+        showBrowserNotification(`Archicad sync complete \u2014 ${total} items updated`)
         if (finalResult.excel_error) {
-          setSyncError(`Data synced but Excel write failed: ${finalResult.excel_error}`)
+          setSyncError(`Data synced but: ${finalResult.excel_error}`)
         }
       } else {
         setSyncError('Refresh completed but no result received')
@@ -200,6 +252,18 @@ function Dashboard() {
     }
   }
 
+  const handleOpenExcel = async () => {
+    try {
+      const res = await fetch(`/api/projects/${id}/open-excel`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncError(data.error || 'Could not open Excel')
+      }
+    } catch {
+      setSyncError('Could not open Excel file')
+    }
+  }
+
   if (loading) return <p className="text-warm-gray">Loading...</p>
   if (error) return <p className="text-red-600">{error}</p>
   if (!project) return <p className="text-warm-gray">Project not found.</p>
@@ -209,6 +273,13 @@ function Dashboard() {
 
   return (
     <div>
+      {/* Success toast */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 bg-olive text-white font-heading font-bold px-6 py-3 rounded-lg shadow-lg animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <Link to="/" className="text-olive hover:underline text-sm font-heading mb-1 inline-block">
@@ -391,9 +462,17 @@ function Dashboard() {
             ? new Date(project.last_synced).toLocaleString()
             : 'Never'}
         </span>
-        <span className="text-olive font-bold">
-          {totalItems} total items
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-olive font-bold">
+            {totalItems} total items
+          </span>
+          <button
+            onClick={handleOpenExcel}
+            className="text-olive font-heading font-bold text-sm hover:text-warm-gray transition underline"
+          >
+            Open in Excel
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

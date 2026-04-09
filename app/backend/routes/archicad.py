@@ -87,6 +87,12 @@ def refresh_archicad(project_id):
     data = request.get_json(silent=True) or {}
     port = data.get('port') or request.args.get('port', type=int)
 
+    # Pre-check: does the Excel file exist?
+    import os as _os
+    xlsm_path = _os.path.join(folder, 'EBIF', 'EXCEL', 'MASTER', 'EBIF Master Template.xlsm')
+    if not _os.path.exists(xlsm_path):
+        return jsonify({'error': 'Excel file not found \u2014 please check the project folder.'}), 404
+
     def generate():
         import threading
         import time
@@ -183,6 +189,8 @@ def refresh_archicad(project_id):
 
         project['schedules'] = dashboard_counts
         project['last_synced'] = datetime.utcnow().isoformat() + 'Z'
+        if port:
+            project['last_tapir_port'] = port
         save_projects(projects)
 
         # Build response with failure details
