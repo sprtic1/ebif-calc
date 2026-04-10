@@ -286,26 +286,24 @@ function Dashboard() {
     setSyncError('')
     try {
       const res = await fetch(`/api/projects/${id}/refresh-excel`, { method: 'POST' })
-      const data = await res.json()
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
         setSyncError(data.error || 'Failed to read Excel')
         setSyncing(false)
         playErrorSound()
         return
       }
+      const data = await res.json()
       setProject(data.project)
       setDetails(data.schedule_details)
       setSummary(data.summary)
       setPullHistory(data.pull_history || [])
       setSyncing(false)
-      const cloudMsg = data.cloud_sync?.ok ? ' — Cloud synced' : ''
+      const cloudMsg = data.cloud_sync?.ok ? ' \u2014 Cloud synced' : ''
       setToast(`Excel refreshed! ${data.summary?.total || 0} items${cloudMsg}`)
       playSuccessSound()
-      if (data.cloud_sync && !data.cloud_sync.ok && data.cloud_sync.message) {
-        setSyncError(data.cloud_sync.message)
-      }
-    } catch {
-      setSyncError('Failed to read Excel file')
+    } catch (e) {
+      setSyncError('Could not connect to backend \u2014 is the server running?')
       setSyncing(false)
       playErrorSound()
     }
